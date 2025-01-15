@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from models.bert_vectorizer import BertVectorizer
+from models.sbert_vectorizer import SBertVectorizer
 from models.similarity import calculate_similarity
 
 
@@ -23,8 +23,8 @@ def predict_guides(
     guide_vectors = torch.load(embedding_file)
 
     # Vectoriser la question utilisateur
-    bert_vectorizer = BertVectorizer()
-    user_question_embedding = bert_vectorizer.vectorize_texts([user_question])
+    sbert_vectorizer = SBertVectorizer()
+    user_question_embedding = sbert_vectorizer.vectorize_texts([user_question])
 
     # Calculer les similarités
     similarities = calculate_similarity(user_question_embedding, guide_vectors)

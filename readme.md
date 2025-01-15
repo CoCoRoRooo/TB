@@ -1,11 +1,11 @@
 # Chatbot de Recommandation pour la Réparation Électronique
 
-Ce projet implémente un chatbot capable de fournir des recommandations de guides pour la réparation électronique en utilisant des modèles de machine learning, des embeddings BERT et des algorithmes de similarité.
+Ce projet implémente un chatbot capable de fournir des recommandations de guides pour la réparation électronique en utilisant des modèles de machine learning, des embeddings SBERT et des algorithmes de similarité.
 
 ## Fonctionnalités Principales
 
 - Extraction des guides de réparation depuis l'API iFixit.
-- Vectorisation des titres de guides à l'aide de `distilbert-base-uncased`.
+- Vectorisation des titres de guides à l'aide de `all-MiniLM-L6-v2`.
 - Prétraitement des textes (nettoyage, suppression des stopwords).
 - Calcul de similarité entre une question utilisateur et les guides disponibles.
 - Traduction automatique des questions utilisateur pour une compatibilité multi-langue (via `deep-translator`).
@@ -21,7 +21,7 @@ CHATBOT/
 ├── guides.json                   # Fichier JSON contenant les guides extraits
 ├── chatbot.html                  # Interface utilisateur (frontend)
 ├── models/
-│   ├── bert_vectorizer.py        # Vectorisation des textes avec BERT
+│   ├── sbert_vectorizer.py       # Vectorisation des textes avec SBERT
 │   ├── load_data.py              # Chargement des données des guides
 │   ├── preprocessing.py          # Prétraitement des textes
 │   ├── save_embeddings.py        # Génération et sauvegarde des embeddings
@@ -35,11 +35,11 @@ CHATBOT/
 
 ### Description des Fichiers
 
-- **`bert_vectorizer.py`** : Ce module contient une classe pour vectoriser des textes en utilisant BERT. Les textes sont transformés en vecteurs numériques via le modèle `distilbert-base-uncased`. Cette vectorisation est au cœur de l'algorithme de recommandation, car elle permet de représenter les textes de manière sémantique. Il offre également une méthode pour traiter les textes par lots, améliorant ainsi l'efficacité lors du traitement de grandes quantités de données.
+- **`sbert_vectorizer.py`** : Ce module contient une classe pour vectoriser des textes en utilisant SBert. Les textes sont transformés en vecteurs numériques via le modèle `all-MiniLM-L6-v2`. Cette vectorisation est au cœur de l'algorithme de recommandation, car elle permet de représenter les textes de manière sémantique. Il offre également une méthode pour traiter les textes par lots, améliorant ainsi l'efficacité lors du traitement de grandes quantités de données.
 
   ```python
-  class BertVectorizer:
-      def __init__(self, model_name="distilbert-base-uncased"):
+  class SBertVectorizer:
+      def __init__(self, model_name="all-MiniLM-L6-v2", device=None):
           # Initialisation du modèle et du tokenizer
   ```
 
@@ -50,7 +50,7 @@ CHATBOT/
       # Fonction de prétraitement
   ```
 
-- **`save_embeddings.py`** : Génère les embeddings des titres des guides en utilisant la classe `BertVectorizer`. Ces vecteurs sont ensuite sauvegardés pour être utilisés dans les calculs de similarité. Ce fichier est exécuté après avoir extrait et nettoyé les données des guides.
+- **`save_embeddings.py`** : Génère les embeddings des titres des guides en utilisant la classe `SBertVectorizer`. Ces vecteurs sont ensuite sauvegardés pour être utilisés dans les calculs de similarité. Ce fichier est exécuté après avoir extrait et nettoyé les données des guides.
 
   ```python
   def save_guide_embeddings(guides):
@@ -94,11 +94,28 @@ CHATBOT/
    cd CHATBOT
    ```
 
-2. Installez les dépendances :
+### 2. Installez les dépendances :
 
-   ```bash
-   pip install flask flask-cors torch transformers nltk scikit-learn deep-translator
-   ```
+```bash
+pip install flask flask-cors torch transformers sentence-transformers nltk scikit-learn deep-translator
+```
+
+#### Explication des dépendances :
+
+- **`flask`** : Framework léger pour créer des applications web en Python. Il est utilisé ici pour exposer un serveur API pour interagir avec le chatbot.
+- **`flask-cors`** : Permet de gérer les en-têtes CORS (Cross-Origin Resource Sharing), ce qui est utile pour autoriser l'application web à interagir avec d'autres domaines, par exemple en utilisant un frontend sur un domaine différent.
+
+- **`torch`** : La bibliothèque PyTorch, utilisée pour travailler avec des réseaux neuronaux et des modèles de deep learning. C'est une dépendance essentielle pour utiliser des modèles comme SBERT ou d'autres architectures basées sur des transformers.
+
+- **`transformers`** : Une bibliothèque de Hugging Face qui fournit des modèles préentraînés et des outils pour travailler avec des architectures de transformers, comme BERT, GPT, et bien d'autres.
+
+- **`sentence-transformers`** : Cette bibliothèque étend `transformers` pour permettre des embeddings de phrases avec des modèles comme SBERT. Elle est spécialement utile pour la recherche de similarités entre des phrases ou des documents.
+
+- **`nltk`** : La bibliothèque Natural Language Toolkit (NLTK) offre des outils pour le traitement du langage naturel (tokenisation, nettoyage de texte, stopwords, etc.). Elle est utilisée ici pour prétraiter les textes avant de les vectoriser avec SBERT.
+
+- **`scikit-learn`** : Une bibliothèque pour le machine learning. Elle est utilisée ici principalement pour la fonction de calcul de similarité (par exemple, la similarité cosinus entre les embeddings).
+
+- **`deep-translator`** : Une bibliothèque pour effectuer des traductions automatiques, pour traduire les questions des utilisateurs, car les guides récupérés depuis l'API d'`iFixit` sont en anglais.
 
 3. Téléchargez les ressources nécessaires pour NLTK :
 
@@ -137,10 +154,10 @@ CHATBOT/
 
 ## Fonctionnement en Détail
 
-### Embeddings BERT et Génération des Recommandations
+### Embeddings SBERT et Génération des Recommandations
 
 1. **Génération des Embeddings (save_embeddings.py)**
-   Les titres des guides sont vectorisés en embeddings à l'aide de BERT. Ces vecteurs sont normalisés et stockés dans un fichier pour être utilisés dans les calculs de similarité.
+   Les titres des guides sont vectorisés en embeddings à l'aide de SBERT. Ces vecteurs sont normalisés et stockés dans un fichier pour être utilisés dans les calculs de similarité.
 
 2. **Prétraitement des Textes (preprocessing.py)**
    Avant la vectorisation, les textes sont nettoyés pour améliorer leur qualité.
@@ -151,7 +168,7 @@ CHATBOT/
 ### Pipeline Global
 
 1. **Traduction (user_interface.py)** : La question est traduite pour assurer une compatibilité avec les modèles en anglais.
-2. **Vectorisation (bert_vectorizer.py)** : La question traduite est convertie en vecteur.
+2. **Vectorisation (sbert_vectorizer.py)** : La question traduite est convertie en vecteur.
 3. **Calcul de Similarité (similarity.py)** : La similarité entre le vecteur question et les embeddings des guides est calculée.
 4. **Recommandations (recommendation_system.py)** : Les guides les plus pertinents sont renvoyés.
 

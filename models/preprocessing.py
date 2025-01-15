@@ -18,7 +18,6 @@ def preprocess_texts(texts):
 
     def clean_text(text):
         text = text.lower()
-        text = re.sub(r"\d+", "", text)  # Supprimer les chiffres
         text = text.translate(
             str.maketrans("", "", string.punctuation)
         )  # Supprimer la ponctuation
