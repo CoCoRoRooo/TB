@@ -9,7 +9,7 @@ class SBertVectorizer:
         Initialise le modèle SBERT.
 
         Args:
-            model_name (str): Le nom du modèle SBERT à utiliser. 
+            model_name (str): Le nom du modèle SBERT à utiliser.
             Par défaut, on utilise "all-MiniLM-L6-v2" (léger et performant).
             device (str): Le dispositif sur lequel exécuter le modèle, "cuda" ou "cpu".
         """
@@ -19,10 +19,10 @@ class SBertVectorizer:
     def vectorize_texts(self, texts):
         """
         Vectorise les textes en utilisant SBERT.
-        
+
         Args:
             texts (list): Une liste de textes à vectoriser.
-        
+
         Returns:
             torch.Tensor: Les embeddings générés par SBERT.
         """
@@ -36,7 +36,7 @@ class SBertVectorizer:
         Args:
             texts (list): Une liste de textes à vectoriser.
             batch_size (int): La taille du lot pour la vectorisation.
-        
+
         Returns:
             torch.Tensor: Les embeddings générés par SBERT.
         """
@@ -45,5 +45,5 @@ class SBertVectorizer:
         for batch in dataloader:
             batch_embeddings = self.model.encode(batch, convert_to_tensor=True)
             embeddings_list.append(batch_embeddings)
-        
+
         return torch.cat(embeddings_list, dim=0)
