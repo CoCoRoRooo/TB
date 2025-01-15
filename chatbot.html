@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbot</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f7f7f7;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        width: 100%;
+      }
+      #chatbox {
+        background-color: #fff;
+        border-radius: 2%;
+        padding: 5%;
+        width: 90%;
+        margin: 0 auto;
+        flex: 1;
+        overflow-y: auto;
+        box-shadow: 0 4% 10% rgba(0, 0, 0, 0.1);
+      }
+      .user-message,
+      .chatbot-message {
+        margin: 2% 0;
+        padding: 3%;
+        border-radius: 2%;
+        max-width: 80%;
+        word-wrap: break-word;
+      }
+      .user-message {
+        background-color: #d1f7d1;
+        align-self: flex-end;
+        text-align: left;
+      }
+      .chatbot-message {
+        background-color: #f1f1f1;
+        align-self: flex-start;
+        text-align: left;
+      }
+      #input-container {
+        width: 90%;
+        margin: 2% auto;
+        display: flex;
+        justify-content: space-between;
+      }
+      input[type="text"] {
+        padding: 1%;
+        font-size: 1em;
+        width: 75%;
+        border: 1% solid #ccc;
+        border-radius: 2%;
+      }
+      input[type="submit"] {
+        padding: 1%;
+        font-size: 1em;
+        width: 20%;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 2%;
+        cursor: pointer;
+      }
+      input[type="submit"]:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chatbox" class="chatbox-container"></div>
+    <div id="input-container">
+      <input type="text" id="userInput" placeholder="Type a message..." />
+      <input type="submit" value="Send" />
+    </div>
+
+    <script>
+      document
+        .querySelector("input[type=submit]")
+        .addEventListener("click", function () {
+          let userInput = document.querySelector("#userInput").value;
+          let chatbox = document.querySelector("#chatbox");
+
+          // Ajouter le message de l'utilisateur
+          let userMessage = document.createElement("p");
+          userMessage.classList.add("user-message");
+          userMessage.innerHTML = "You: " + userInput;
+          chatbox.appendChild(userMessage);
+
+          // Effacer le champ texte après envoi
+          document.querySelector("#userInput").value = "";
+
+          // Requête API
+          fetch("http://127.0.0.1:5000/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ message: userInput }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              let chatbotMessage = document.createElement("p");
+              chatbotMessage.classList.add("chatbot-message");
+
+              // Ajouter la réponse du chatbot
+              let message = "";
+              if (
+                data.recommended_guides &&
+                data.recommended_guides.length > 0
+              ) {
+                message += "<strong>Recommended Guides:</strong><br>";
+                data.recommended_guides.forEach((element) => {
+                  message += `<strong>Titre:</strong> ${element.title} <br> 
+                              <strong>Résumé:</strong> ${element.summary} <br> 
+                              <strong>URL:</strong> <a href="${element.url}" target="_blank">${element.url}</a> <br><br>`;
+                });
+              }
+
+              message += `<strong>Chatbot Response:</strong><br>${data.response}`;
+
+              chatbotMessage.innerHTML = message;
+              chatbox.appendChild(chatbotMessage);
+
+              // Faire défiler vers le bas
+              chatbox.scrollTop = chatbox.scrollHeight;
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+            });
+        });
+    </script>
+  </body>
+</html>
