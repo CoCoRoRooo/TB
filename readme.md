@@ -5,11 +5,112 @@ Ce projet implémente un chatbot capable de fournir des recommandations de guide
 ## Fonctionnalités Principales
 
 - Extraction des guides de réparation depuis l'API iFixit.
-- Vectorisation des titres de guides à l'aide de `all-MiniLM-L6-v2`.
+- Vectorisation des titres de guides à l'aide de **all-MiniLM-L6-v2**.
 - Prétraitement des textes (nettoyage, suppression des stopwords).
 - Calcul de similarité entre une question utilisateur et les guides disponibles.
-- Traduction automatique des questions utilisateur pour une compatibilité multi-langue (via `deep-translator`).
+- Traduction automatique des questions utilisateur pour une compatibilité multi-langue (via **deep-translator**).
+- Interaction conversationnelle via un chatbot OpenAI, avec un contexte défini et un historique des messages.
+- Recommandation des guides les plus pertinents uniquement s'ils atteignent un seuil minimum de similarité.
+- La recherche de guides repose sur la dernière réponse générée par l'agent GPT, et s'affine avec le temps grâce aux interactions avec l'utilisateur, maximisant ainsi les chances de proposer le guide le plus adapté.
 - Interface utilisateur interactive avec un frontend HTML pour communiquer avec l'API Flask.
+
+## Modifications Récentes
+
+### 1. Filtrage des guides basé sur un seuil de similarité (predict.py)
+
+La fonction **predict_guides** a été mise à jour pour retourner uniquement les guides qui dépassent un seuil minimum de similarité (paramètre `similarity_threshold`). Si aucun guide ne dépasse ce seuil, une liste vide est retournée. Cela garantit que seules les recommandations pertinentes sont affichées.
+
+#### Code Exemple :
+
+```python
+def predict_guides(
+    user_question,
+    guides,
+    embedding_file="guide_embeddings.pt",
+    top_n=3,
+    similarity_threshold=0.7,
+):
+    """
+    Prédit les meilleurs guides en fonction de la similarité avec la question utilisateur,
+    uniquement si leur similarité dépasse un seuil minimum.
+
+    Args:
+        user_question (str): La question posée par l'utilisateur.
+        guides (list): Liste des guides.
+        embedding_file (str): Chemin vers le fichier des embeddings précalculés.
+        top_n (int): Nombre de guides à retourner.
+        similarity_threshold (float): Seuil minimum de similarité pour retourner un guide.
+
+    Returns:
+        list: Les guides les plus similaires si leur similarité dépasse le seuil, sinon liste vide.
+    """
+    # Charger les embeddings des guides
+    guide_vectors = torch.load(embedding_file)
+
+    # Vectoriser la question utilisateur
+    sbert_vectorizer = SBertVectorizer()
+    user_question_embedding = sbert_vectorizer.vectorize_texts([user_question])
+
+    # Calculer les similarités
+    similarities = calculate_similarity(user_question_embedding, guide_vectors)
+
+    # Obtenir les indices des `top_n` meilleures similarités
+    top_indices = np.argsort(similarities.flatten())[-top_n:][::-1]
+
+    # Filtrer les guides en fonction du seuil de similarité
+    relevant_guides = []
+    for i in top_indices:
+        if similarities.flatten()[i] >= similarity_threshold:
+            relevant_guides.append(guides[i])
+
+    # Retourner les guides pertinents (s'ils existent)
+    return relevant_guides
+```
+
+### 2. Historique de conversation et contexte (chatbot.py)
+
+Le chatbot conserve un historique des messages grâce à **ConversationManager**. Le dernier message généré par l'assistant est utilisé comme base pour prédire les guides pertinents. Cela permet d'affiner la recherche avec le temps et les interactions utilisateur.
+
+#### Principales Fonctionnalités :
+
+- Contexte initial défini pour le chatbot, spécifiant son rôle et ses objectifs.
+- La fonction **get_recommended_guides** utilise le dernier message de l'assistant pour générer des recommandations basées sur l'interaction précédente.
+
+#### Code Exemple :
+
+```python
+from models.conversation_manager import ConversationManager
+
+def get_recommended_guides():
+    guides_text_data = ""
+    for message in reversed(conversation_manager.get_history()):
+        if message["role"] == "assistant":
+            guides_text_data = message["content"]
+            break
+
+    return ask_user_question(guides_text_data)
+```
+
+### 3. Gestion de l'historique (conversation_manager.py)
+
+Un nouveau module, **ConversationManager**, gère l'historique de la conversation. Cela permet au chatbot de maintenir un contexte cohérent tout au long de l'interaction.
+
+#### Code Exemple :
+
+```python
+class ConversationManager:
+    def __init__(self):
+        self.history = []
+
+    def add_message(self, role, content):
+        self.history.append({"role": role, "content": content})
+
+    def get_history(self):
+        return self.history
+
+    def clear_history(self):
+        self.history = []
+```
 
 ## Structure du Projet
 
@@ -17,9 +118,9 @@ Ce projet implémente un chatbot capable de fournir des recommandations de guide
 CHATBOT/
 ├── app.py                        # Application Flask pour interagir avec l'utilisateur
 ├── chatbot.py                    # Interaction avec l'API OpenAI
-├── guides.py                     # Extraction des guides depuis l'API iFixit
-├── guides.json                   # Fichier JSON contenant les guides extraits
-├── chatbot.html                  # Interface utilisateur (frontend)
+├── data/
+│   ├── guides.json               # Fichier JSON contenant les guides extraits
+│   ├── guides.py                 # Extraction des guides depuis l'API iFixit
 ├── models/
 │   ├── sbert_vectorizer.py       # Vectorisation des textes avec SBERT
 │   ├── load_data.py              # Chargement des données des guides
@@ -28,9 +129,11 @@ CHATBOT/
 │   ├── similarity.py             # Calcul des similarités entre vecteurs
 ├── prediction/
 │   ├── predict.py                # Prédiction des guides pertinents
-│   ├── recommendation_system.py  # Système de recommandation basé sur la similarité
 ├── interface/
 │   ├── user_interface.py         # Interface utilisateur pour traduire les questions et obtenir des recommandations
+│   ├── chatbot.html              # Interface utilisateur (frontend)
+├── utils/
+│   ├── conversation_manager.py   # Gestion de l'historique des conversations
 ```
 
 ### Description des Fichiers
@@ -163,7 +266,7 @@ pip install flask flask-cors torch transformers sentence-transformers nltk sciki
    Avant la vectorisation, les textes sont nettoyés pour améliorer leur qualité.
 
 3. **Prédiction (predict.py)**
-   Lorsqu'une question est posée, elle est traduite en anglais, vectorisée, puis comparée aux embeddings des guides pour calculer les similarités.
+   Lorsqu'une question est posée, elle est traduite en anglais, vectorisée, puis comparée aux embeddings des guides pour calculer les similarités. Seuls les guides dépassant un seuil de similarité sont retournés.
 
 ### Pipeline Global
 
