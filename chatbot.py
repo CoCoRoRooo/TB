@@ -7,7 +7,7 @@ import os
 # Charger les variables d'environnement à partir du fichier .env
 load_dotenv()
 
-# Initialisation du client avec votre clé API OpenAI
+# Initialisation du client avec clé API OpenAI
 OPENAI_KEY = os.getenv("OPENAI_KEY")
 client = OpenAI(api_key=OPENAI_KEY)
 
