@@ -200,7 +200,7 @@ CHATBOT/
 ### 2. Installez les dépendances :
 
 ```bash
-pip install flask flask-cors torch transformers sentence-transformers nltk scikit-learn deep-translator
+pip install flask flask-cors torch transformers sentence-transformers nltk scikit-learn deep-translator python-dotenv
 ```
 
 #### Explication des dépendances :

@@ -1,11 +1,15 @@
 from openai import OpenAI
+from dotenv import load_dotenv
 from utils.conversation_manager import ConversationManager
 from interface.user_interface import ask_user_question
+import os
+
+# Charger les variables d'environnement à partir du fichier .env
+load_dotenv()
 
 # Initialisation du client avec votre clé API OpenAI
-client = OpenAI(
-    api_key="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"
-)
+OPENAI_KEY = os.getenv("OPENAI_KEY")
+client = OpenAI(api_key=OPENAI_KEY)
 
 
 def start_conversation():
