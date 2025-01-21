@@ -232,10 +232,10 @@ CHATBOT/
       # Calcul de similarité cosinus
   ```
 
-- **`predict.py`** : Combine plusieurs étapes, dont la vectorisation de la question utilisateur et le calcul de similarité, pour identifier les guides les plus pertinents. Il exploite les embeddings précalculés pour des prédictions rapides.
+- **`predict.py`** : Combine plusieurs étapes, dont la vectorisation de la dernière réponse du chatbot et le calcul de similarité, pour identifier les guides les plus pertinents. Il exploite les embeddings précalculés pour des prédictions rapides.
 
   ```python
-  def predict_guides(user_question):
+  def predict_guides(chatbot_infos):
       # Pipeline de prédiction
   ```
 
