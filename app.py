@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from chatbot import chat_gpt, start_conversation, get_recommended_guides
+from chatbot import chat_gpt, start_conversation, get_recommended_resources
 
 app = Flask(__name__)
 CORS(app)  # Active CORS pour toutes les routes
@@ -35,7 +35,7 @@ def get_guides():
     Lance la conversation avec une question initiale.
     """
     return (
-        jsonify({"response": get_recommended_guides()}),
+        jsonify({"response": get_recommended_resources()}),
         200,
     )
 

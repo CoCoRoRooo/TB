@@ -1,7 +1,7 @@
 from openai import OpenAI
 from dotenv import load_dotenv
 from utils.conversation_manager import ConversationManager
-from interface.user_interface import ask_user_question
+from interface.user_interface import get_resources
 import os
 
 # Charger les variables d'environnement à partir du fichier .env
@@ -22,8 +22,10 @@ def start_conversation():
         "Votre rôle est de diagnostiquer les problèmes rencontrés par les utilisateurs "
         "et de fournir des solutions à partir d'informations disponibles sur internet, "
         "y compris des forums, blogs, vidéos, guides, et autres ressources. "
-        "Vous pouvez également recommander des guides de réparation spécifiques "
-        "pour aider les utilisateurs à résoudre leurs problèmes. "
+        "Demande systématiquement la marque et le modèle de l'appareil. "
+        "Le modèle doit être spécifique pour obtenir des résultats précis. Si plusieurs modèles sont disponibles, demande des détails supplémentaires. "
+        "Demande ensuite la nature du problème pour fournir une assistance appropriée. "
+        "Donne le nom de guides de réparation spécifiques pour aider l'utilisateur à résoudre le problème. "
     )
 
     # Ajout du message d'introduction au contexte de la conversation
@@ -79,14 +81,12 @@ def chat_gpt(prompt):
         return f"Une erreur est survenue avec l'API OpenAI : {e}"
 
 
-def get_recommended_guides():
-    guides_text_data = ""
+def get_recommended_resources():
+    resources_text_data = ""
     for message in reversed(conversation_manager.get_history()):
         if message["role"] == "assistant":
-            guides_text_data = message["content"]
+            resources_text_data = message["content"]
             break  # Arrête la boucle dès qu'on trouve le dernier message de l'assistant
 
-    print(guides_text_data)
-
     # Demander des recommandations de guides basées sur l'historique
-    return ask_user_question(guides_text_data)
+    return get_resources(resources_text_data)

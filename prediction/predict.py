@@ -5,18 +5,18 @@ from models.similarity import calculate_similarity
 
 
 def predict_guides(
-    user_question,
+    chatbot_infos,
     guides,
     embedding_file="guide_embeddings.pt",
     top_n=3,
     similarity_threshold=0.7,
 ):
     """
-    Prédit les meilleurs guides en fonction de la similarité avec la question utilisateur,
+    Prédit les meilleurs guides en fonction de la similarité avec la dernière réponse du chatbot,
     uniquement si leur similarité dépasse un seuil minimum.
 
     Args:
-        user_question (str): La question posée par l'utilisateur.
+        chatbot_infos (str): La dérnière réponse donné par le chatbot.
         guides (list): Liste des guides.
         embedding_file (str): Chemin vers le fichier des embeddings précalculés.
         top_n (int): Nombre de guides à retourner.
@@ -30,10 +30,10 @@ def predict_guides(
 
     # Vectoriser la question utilisateur
     sbert_vectorizer = SBertVectorizer()
-    user_question_embedding = sbert_vectorizer.vectorize_texts([user_question])
+    chatbot_infos_embedding = sbert_vectorizer.vectorize_texts([chatbot_infos])
 
     # Calculer les similarités
-    similarities = calculate_similarity(user_question_embedding, guide_vectors)
+    similarities = calculate_similarity(chatbot_infos_embedding, guide_vectors)
 
     # Obtenir les indices des `top_n` meilleures similarités
     top_indices = np.argsort(similarities.flatten())[-top_n:][::-1]
