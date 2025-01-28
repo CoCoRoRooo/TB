@@ -27,6 +27,6 @@ def save_guide_embeddings(guides, output_file="guide_embeddings.pt"):
 
 
 if __name__ == "__main__":
-    with open("guides.json", "r") as f:
+    with open("./data/guides.json", "r") as f:
         guides = json.load(f)
     save_guide_embeddings(guides)
