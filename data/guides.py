@@ -49,7 +49,7 @@ guides = fetch_all_guides()
 
 # Enregistrement des guides dans un fichier JSON
 if guides:
-    with open("guides.json", "w") as f:
+    with open("./data/guides.json", "w") as f:
         json.dump(guides, f, indent=2)
     print("Données enregistrées dans guides.json")
 else:
