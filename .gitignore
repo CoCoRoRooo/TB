@@ -1,2 +1,1 @@
-/guide_embeddings.pt
-/.env
+/data/prepare_dataset/*.json

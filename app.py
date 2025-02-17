@@ -1,43 +1,34 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from chatbot import chat_gpt, start_conversation, get_recommended_resources
+from flask import Flask, request, render_template, jsonify
+from tokenizer import load_guides, index_guides, search_guides
+from llm import generate_response
 
 app = Flask(__name__)
-CORS(app)  # Active CORS pour toutes les routes
+
+# Charger et indexer les guides au démarrage du serveur
+guides = load_guides("data/prepare_dataset/guides_dataset.json")
+faiss_index, guide_texts, embed_model = index_guides(guides)
 
 
-@app.route("/chat", methods=["POST"])
-def chat():
-    user_input = request.json.get("message", "")
-    response = chat_gpt(user_input)
-
-    return (
-        jsonify({"response": response}),
-        200,
-    )  # Retourne la réponse JSON avec un code HTTP 200
+@app.route("/")
+def home():
+    return render_template("index.html")
 
 
-@app.route("/start", methods=["POST"])
-def open_conversation():
-    """
-    Lance la conversation avec une question initiale.
-    """
-    start_conversation()
-    return (
-        jsonify({"response": start_conversation()}),
-        200,
-    )
+@app.route("/ask", methods=["POST"])
+def ask():
+    data = request.json
+    user_query = data.get("query", "")
 
+    if not user_query:
+        return jsonify({"error": "Aucune question fournie"}), 400
 
-@app.route("/get_guides", methods=["POST"])
-def get_guides():
-    """
-    Lance la conversation avec une question initiale.
-    """
-    return (
-        jsonify({"response": get_recommended_resources()}),
-        200,
-    )
+    # Recherche des guides pertinents
+    top_guides = search_guides(user_query, faiss_index, guide_texts, embed_model)
+
+    # Génération de réponse avec OpenAI
+    response = generate_response(user_query, top_guides)
+
+    return jsonify({"query": user_query, "guides": top_guides, "response": response})
 
 
 if __name__ == "__main__":
