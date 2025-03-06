@@ -1,35 +1,64 @@
-from openai import OpenAI
-from dotenv import load_dotenv
-import os
+from langchain_openai import ChatOpenAI
+from langchain.schema.runnable import RunnablePassthrough
+from langchain.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.language_models import LLM
+from typing import Any, List
 import ollama
+import os
+from dotenv import load_dotenv
 
-# Charger les variables d'environnement à partir du fichier .env
+
+class OllamaLLM(LLM):
+    model: str = "mistral"
+
+    def _call(self, prompt: str, stop: List[str] = None) -> str:
+        response = ollama.chat(
+            model=self.model, messages=[{"role": "user", "content": prompt}]
+        )
+        return response["message"]["content"]
+
+    @property
+    def _identifying_params(self) -> dict:
+        return {"model": self.model}
+
+    @property
+    def _llm_type(self) -> str:
+        return "ollama"
+
+
+# Charger les variables d'environnement
 load_dotenv()
-
-# Initialisation du client avec clé API OpenAI
 OPENAI_KEY = os.getenv("OPENAI_KEY")
-client = OpenAI(api_key=OPENAI_KEY)
+
+# Utiliser un modèle OpenAI ou Ollama
+use_ollama = True  # Mettre à False pour utiliser OpenAI
+
+if not use_ollama:
+    llm = ChatOpenAI(openai_api_key=OPENAI_KEY, model="gpt-4", temperature=0.5)
+else:
+    llm = OllamaLLM()
+
+# Définir le prompt
+prompt_template = PromptTemplate(
+    input_variables=["context", "question"],
+    template="L'utilisateur pose la question : {question}\n\nVoici des guides pertinents :\n{context}\n\nRéponds en t'appuyant sur ces guides.",
+)
 
 
-def generate_response(user_query, relevant_guides):
-    context = "\n\n".join(relevant_guides)
-    prompt = f"L'utilisateur pose la question : {user_query}\n\nVoici des guides pertinents :\n{context}\n\nRéponds de manière concise et utile en t'appuyant sur les guides s'il y en a."
+# Fonction qui récupère le contenu des documents trouvés
+def format_documents(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
 
-    print(prompt)
 
-    # response = client.chat.completions.create(
-    #     model="gpt-4",  # Utiliser un modèle plus léger si besoin (gpt-3.5-turbo)
-    #     messages=[
-    #         {"role": "system", "content": "Tu es un assistant technique."},
-    #         {"role": "user", "content": prompt},
-    #     ],
-    #     temperature=0.5,
-    # )
-
-    response = ollama.chat(
-        model="mistral", messages=[{"role": "user", "content": prompt}]
+# Chaîne RAG
+def create_rag_chain(retriever):
+    return (
+        {
+            "context": retriever | format_documents,
+            "question": RunnablePassthrough(),
+        }
+        | prompt_template
+        | llm
+        | StrOutputParser()
     )
-
-    return response["message"]["content"]
-
-    # return response.choices[0].message.content

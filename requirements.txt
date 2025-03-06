@@ -3,3 +3,5 @@ faiss-cpu
 sentence-transformers
 openai
 python-dotenv
+langchain
+ollama

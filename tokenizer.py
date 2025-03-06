@@ -1,7 +1,7 @@
-import faiss
 import json
-import numpy as np
-from sentence_transformers import SentenceTransformer
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain.schema import Document
 
 
 # Charger les guides depuis un fichier JSON
@@ -11,31 +11,24 @@ def load_guides(file_path):
     return guides
 
 
-# Convertir les guides en vecteurs
-def index_guides(
-    guides, model_name="./sbert_fine_tuned_symptoms"
-):  # Utilisation du modèle Fine-tune
-    model = SentenceTransformer(model_name)
-    # texts = [f"{g['dataType']} - {g['symptoms']} {(g['url'])}" for g in guides]
-    texts = [
-        f"{g['dataType']} - {g['title']}; {g['general_solution']} {(g['url'])}"
+# Convertir les guides en vecteurs et créer un retriever LangChain
+def index_guides(guides, model_name="sentence-transformers/paraphrase-MiniLM-L6-v2"):
+    # Construire les textes et les objets Document
+    documents = [
+        Document(
+            page_content=f"{g['dataType']} - {g['type']} {g['subject']} : {g['title']} {(g['url'])}",
+            metadata={
+                "url": g["url"],
+                "type": g["type"],
+                "subject": g["subject"],
+                "title": g["title"],
+            },
+        )
         for g in guides
     ]
 
-    # Créer des embeddings
-    embeddings = model.encode(texts, convert_to_numpy=True)
+    # Créer des embeddings avec LangChain
+    embedding_model = HuggingFaceEmbeddings(model_name=model_name)
+    vector_store = FAISS.from_documents(documents, embedding_model)
 
-    # Stocker les embeddings dans FAISS
-    dimension = embeddings.shape[1]
-    index = faiss.IndexFlatL2(dimension)  # L2 = Euclidean distance
-    index.add(embeddings)
-
-    return index, texts, model
-
-
-def search_guides(query, faiss_index, guide_texts, model, top_k=3):
-    query_embedding = model.encode([query], convert_to_numpy=True)
-    distances, indices = faiss_index.search(query_embedding, top_k)
-
-    results = [guide_texts[i] for i in indices[0]]
-    return results
+    return vector_store.as_retriever(), embedding_model
