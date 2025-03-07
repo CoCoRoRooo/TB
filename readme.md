@@ -46,12 +46,11 @@ pip install -r requirements.txt
 #### Explication des dépendances :
 
 - **flask** → Pour créer l'API backend qui communique avec l'interface web.
-- **faiss-cpu** → Pour la recherche rapide des guides en utilisant des embeddings.
-- **sentence-transformers** → Pour générer les embeddings des textes avec _paraphrase-MiniLM-L6-v2_.
-- **openai** → Pour interagir avec l'API OpenAI et générer des réponses via ChatGPT.
-- **python-dotenv** → Pour charger la clé API OpenAI depuis un fichier `.env` de manière sécurisée.
+- **python-dotenv** → Pour charger des variables d'environnement depuis un fichier .env de manière sécurisée.
 - **langchain** → Pour orchestrer la chaîne RAG avec retrieval et LLM.
 - **ollama** → Pour exécuter Mistral localement.
+- **langchain_community** → Module complémentaire pour LangChain.
+- **langchain_openai** → Pour interagir avec l'API OpenAI et générer des réponses via ChatGPT.
 
 ### 3️⃣ Lancement du serveur Flask
 
