@@ -6,6 +6,7 @@ app = Flask(__name__)
 
 # Charger et indexer les guides au démarrage du serveur
 guides = load_guides("data/guides.json")
+print(f"{len(guides)} guides chargés.")
 retriever, embed_model = index_guides(guides)
 
 # Construire la chaîne RAG
