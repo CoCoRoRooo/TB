@@ -1,6 +1,4 @@
 import json
-import re
-import ast
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document
@@ -39,4 +37,4 @@ def index_guides(guides, model_name="sentence-transformers/all-mpnet-base-v2"):
     embedding_model = HuggingFaceEmbeddings(model_name=model_name)
     vector_store = FAISS.from_documents(splits, embedding_model)
 
-    return vector_store.as_retriever(search_kwargs={"k": 2}), embedding_model
+    return vector_store.as_retriever(search_kwargs={"k": 2})
