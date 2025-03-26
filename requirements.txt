@@ -5,3 +5,4 @@ ollama
 langchain_community
 langchain_huggingface
 langchain_openai
+faiss-cpu
