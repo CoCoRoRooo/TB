@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 900 550" xmlns="http://www.w3.org/2000/svg">
+  <!-- Définition des gradients et styles -->
+  <defs>
+    <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="moduleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f5f7ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#eef2ff;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="1" dy="1" stdDeviation="3" flood-opacity="0.2"/>
+    </filter>
+    <style>
+      .title { font-family: 'Poppins', sans-serif; font-size: 20px; font-weight: 600; fill: white; }
+      .subtitle { font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 400; fill: #eef2ff; }
+      .module-title { font-family: 'Poppins', sans-serif; font-size: 16px; font-weight: 600; fill: #4f46e5; }
+      .module-desc { font-family: 'Poppins', sans-serif; font-size: 12px; font-weight: 400; fill: #6b7280; }
+      .component { font-family: 'Menlo', monospace; font-size: 11px; font-weight: 400; fill: #4b5563; }
+      .flow-text { font-family: 'Poppins', sans-serif; font-size: 11px; font-weight: 600; fill: #4f46e5; }
+      .api-text { font-family: 'Poppins', sans-serif; font-size: 11px; font-weight: 600; fill: #10b981; }
+    </style>
+  </defs>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="900" height="70" rx="8" fill="url(#headerGradient)" filter="url(#shadow)"/>
+  <text x="30" y="35" class="title">Architecture du Système RAG - Chatbot Support Technique</text>
+  <text x="30" y="55" class="subtitle">Retrieval-Augmented Generation avec LangChain, FAISS et OpenAI</text>
+
+  <!-- Interface Web Bloc -->
+  <rect x="50" y="100" width="200" height="120" rx="8" fill="url(#moduleGradient)" stroke="#4f46e5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="70" y="130" class="module-title">Interface Web</text>
+  <text x="70" y="150" class="module-desc">Interagit avec l'utilisateur</text>
+  <text x="70" y="175" class="component">app.py</text>
+  <text x="70" y="195" class="component">templates/index.html</text>
+  <text x="70" y="215" class="component">static/js/main.js</text>
+
+  <!-- Moteur RAG Bloc -->
+  <rect x="350" y="100" width="200" height="120" rx="8" fill="url(#moduleGradient)" stroke="#4f46e5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="370" y="130" class="module-title">Moteur RAG</text>
+  <text x="370" y="150" class="module-desc">Orchestre le traitement</text>
+  <text x="370" y="175" class="component">rag_chain.py</text>
+  <text x="370" y="195" class="component">- Chaînes de traitement</text>
+  <text x="370" y="215" class="component">- Prompts système</text>
+
+  <!-- Système de récupération Bloc -->
+  <rect x="650" y="100" width="200" height="120" rx="8" fill="url(#moduleGradient)" stroke="#4f46e5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="670" y="130" class="module-title">Système de récupération</text>
+  <text x="670" y="150" class="module-desc">Indexe et recherche</text>
+  <text x="670" y="175" class="component">retriever.py</text>
+  <text x="670" y="195" class="component">- FAISS Vector Store</text>
+  <text x="670" y="215" class="component">- HuggingFace Embeddings</text>
+
+  <!-- API Client Bloc -->
+  <rect x="650" y="260" width="200" height="100" rx="8" fill="url(#moduleGradient)" stroke="#10b981" stroke-width="2" filter="url(#shadow)"/>
+  <text x="670" y="290" class="module-title">Client API</text>
+  <text x="670" y="310" class="module-desc">Récupération externe</text>
+  <text x="670" y="330" class="component">api_client.py</text>
+  <text x="670" y="350" class="component">- iFixit API</text>
+
+  <!-- Utilitaires Bloc -->
+  <rect x="350" y="260" width="200" height="100" rx="8" fill="url(#moduleGradient)" stroke="#4f46e5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="370" y="290" class="module-title">Utilitaires</text>
+  <text x="370" y="310" class="module-desc">Fonctions auxiliaires</text>
+  <text x="370" y="330" class="component">utils.py</text>
+  <text x="370" y="350" class="component">- Formatage de données</text>
+
+  <!-- Sources de données -->
+  <rect x="350" y="400" width="200" height="120" rx="8" fill="url(#moduleGradient)" stroke="#4f46e5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="370" y="430" class="module-title">Sources de données</text>
+  <text x="370" y="450" class="module-desc">Documents de base</text>
+  <text x="370" y="475" class="component">guides.json</text>
+  <text x="370" y="495" class="component">techsupport_posts.json</text>
+  <text x="370" y="515" class="component">get_posts.py, guides.py</text>
+
+  <!-- LLM -->
+  <rect x="650" y="400" width="200" height="120" rx="8" fill="url(#moduleGradient)" stroke="#4f46e5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="670" y="430" class="module-title">LLM</text>
+  <text x="670" y="450" class="module-desc">Générateur de réponses</text>
+  <text x="670" y="475" class="component">OpenAI GPT-4.1</text>
+  <text x="670" y="495" class="component">- Génération de requêtes</text>
+  <text x="670" y="515" class="component">- Génération de réponses</text>
+
+  <!-- Interface utilisateur -->
+  <rect x="50" y="260" width="200" height="260" rx="8" fill="url(#moduleGradient)" stroke="#4f46e5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="70" y="290" class="module-title">Interface utilisateur</text>
+  <text x="70" y="310" class="module-desc">Éléments visuels</text>
+  <text x="70" y="335" class="component">templates/index.html</text>
+  <text x="70" y="355" class="component">- Structure responsive</text>
+  <text x="70" y="375" class="component">static/css/style.css</text>
+  <text x="70" y="395" class="component">- Styles et animations</text>
+  <text x="70" y="415" class="component">static/js/main.js</text>
+  <text x="70" y="435" class="component">- Interactions</text>
+  <text x="70" y="455" class="component">- Formatage Markdown</text>
+  <text x="70" y="475" class="component">- Effet de frappe</text>
+  <text x="70" y="495" class="component">- Sanitisation (DOMPurify)</text>
+
+  <!-- Flux - Interface Web -> Moteur RAG -->
+  <path d="M250 160 L350 160" stroke="#4f46e5" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <circle cx="300" cy="160" r="15" fill="white" stroke="#4f46e5" stroke-width="1"/>
+  <text x="300" y="164" text-anchor="middle" class="flow-text">1</text>
+
+  <!-- Flux - Moteur RAG -> Système de récupération -->
+  <path d="M550 160 L650 160" stroke="#4f46e5" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <circle cx="600" cy="160" r="15" fill="white" stroke="#4f46e5" stroke-width="1"/>
+  <text x="600" y="164" text-anchor="middle" class="flow-text">2</text>
+
+  <!-- Flux - Système de récupération -> Sources de données -->
+  <path d="M750 220 L750 260" stroke="#4f46e5" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M750 360 L750 400" stroke="#4f46e5" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <circle cx="750" cy="370" r="15" fill="white" stroke="#4f46e5" stroke-width="1"/>
+  <text x="750" y="374" text-anchor="middle" class="flow-text">4</text>
+
+  <!-- Flux - Système de récupération -> Client API -->
+  <path d="M750 260 L750 220" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <circle cx="750" cy="240" r="15" fill="white" stroke="#10b981" stroke-width="1"/>
+  <text x="750" y="244" text-anchor="middle" class="api-text">3</text>
+
+  <!-- Flux - Système de récupération -> Moteur RAG -->
+  <path d="M650 180 L550 180" stroke="#4f46e5" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <circle cx="600" cy="180" r="15" fill="white" stroke="#4f46e5" stroke-width="1"/>
+  <text x="600" y="184" text-anchor="middle" class="flow-text">5</text>
+
+  <!-- Flux - Moteur RAG -> LLM -->
+  <path d="M450 220 L450 460 L650 460" stroke="#4f46e5" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <circle cx="550" cy="460" r="15" fill="white" stroke="#4f46e5" stroke-width="1"/>
+  <text x="550" y="464" text-anchor="middle" class="flow-text">6</text>
+
+  <!-- Flux - LLM -> Moteur RAG -->
+  <path d="M650 440 L550 440 L550 220 L550 220" stroke="#4f46e5" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <circle cx="550" cy="440" r="15" fill="white" stroke="#4f46e5" stroke-width="1"/>
+  <text x="550" y="444" text-anchor="middle" class="flow-text">7</text>
+
+  <!-- Flux - Moteur RAG -> Interface Web -->
+  <path d="M350 140 L250 140" stroke="#4f46e5" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <circle cx="300" cy="140" r="15" fill="white" stroke="#4f46e5" stroke-width="1"/>
+  <text x="300" y="144" text-anchor="middle" class="flow-text">8</text>
+
+  <!-- Flux - Utilitaires -->
+  <path d="M450 260 L450 220" stroke="#4f46e5" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <circle cx="450" cy="240" r="15" fill="white" stroke="#4f46e5" stroke-width="1"/>
+  <text x="450" y="244" text-anchor="middle" class="flow-text">U</text>
+
+  <!-- Marqueurs de flèche -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4f46e5" />
+    </marker>
+  </defs>
+  
+  <!-- Légende du flux -->
+  <rect x="10" y="530" width="880" height="20" rx="4" fill="#fafafa" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="20" y="544" class="flow-text">1: Question</text>
+  <text x="130" y="544" class="flow-text">2: Génération de requêtes</text>
+  <text x="350" y="544" class="api-text">3: Requête API</text>
+  <text x="470" y="544" class="flow-text">4: Récupération de données</text>
+  <text x="650" y="544" class="flow-text">5: Documents pertinents</text>
+  <text x="820" y="544" class="flow-text">6-7-8: Génération</text>
+</svg>

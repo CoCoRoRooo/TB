@@ -1,2 +1,1 @@
-/data/prepare_dataset/*.json
-/data/alt/*.json
+.env

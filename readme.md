@@ -1,170 +1,152 @@
-# 🚀 Assistant Technique avec IA et Recherche de Guides
+# Chatbot RAG Support Technique
 
-Ce projet est une **API Flask** avec une **interface web** qui permet aux utilisateurs de poser des questions techniques. Le système utilise :
-
-- **FAISS** pour la recherche vectorielle des guides les plus pertinents
-- **Mistral (via Ollama) ou OpenAI GPT-4** pour générer des réponses intelligentes
-- **Flask** pour gérer l'API et la communication
-- **LangChain** pour orchestrer la chaîne de traitement RAG
-
----
-
-## 📁 Structure des fichiers
+Un système de question-réponse intelligent basé sur l'architecture RAG (Retrieval-Augmented Generation) pour le support technique, exploitant des guides techniques et des discussions Reddit.
 
 ```
-📂 TB
-│-- 📂 static/               # Fichiers CSS pour le style
-│   ├── styles.css          # Feuille de style principale
-│-- 📂 templates/            # Fichiers HTML
-│   ├── index.html          # Interface utilisateur
-│-- 📂 data/                 # Fichiers de données
-│   ├── guides.json         # Base de connaissances (guides techniques)
-│   ├── guides.py           # Récupération et stockage des guides depuis iFixIt
-│-- .env                    # Stocke la clé API OpenAI
-│-- app.py                  # API Flask
-│-- tokenizer.py            # Gestion de l'indexation FAISS
-│-- llm.py                  # Génération de réponses avec Mistral/OpenAI
-│-- README.md               # Documentation du projet
+┌─────────────────────┐     ┌───────────────────┐     ┌─────────────────────┐
+│                     │     │                   │     │                     │
+│  Interface Web      ├────►│  Moteur RAG       ├────►│  Système de         │
+│  (Flask + HTML/CSS) │     │  (LangChain)      │     │  Récupération       │
+│                     │     │                   │     │ (FAISS + Embeddings)│
+└─────────┬───────────┘     └─────────┬─────────┘     └──────────┬──────────┘
+          │                           │                          │
+          │                           │                          │
+          │                           │                          │
+          │                     ┌─────▼─────────────┐            │
+          │                     │                   │            │
+          └────────────────────►│  Client API       │◄───────────┘
+                                │  (iFixit)         │
+                                │                   │
+                                └───────────────────┘
 ```
 
----
+## ✨ Caractéristiques
 
-## 🛠️ Installation et exécution
+- ✅ **Interface intuitive** - Chat moderne avec animations et formatting Markdown
+- 🔍 **Recherche intelligente** - Génération de requêtes alternatives pour une meilleure récupération
+- 🧠 **Contexte enrichi** - Utilisation de posts Reddit et guides techniques avec récupération API dynamique
+- 📊 **Transparence** - Visualisation des documents et requêtes utilisés pour chaque réponse
+- 🚀 **Performance** - Optimisé avec CUDA pour les embeddings et FAISS pour la recherche vectorielle
 
-### 1️⃣ Prérequis
+## 📋 Prérequis
 
-- **Python 3.8+**
-- **Clé API OpenAI** (si utilisation de GPT-4, à ajouter dans `.env`)
-- **Ollama** installé pour utiliser Mistral en local
+- Python 3.x
+- Clé API OpenAI
+- CUDA recommandé (mais non obligatoire)
+- Fichiers sources JSON dans `./data/`
 
-### 2️⃣ Installation des dépendances
+## 🚀 Installation
 
+1. Cloner le dépôt
+```bash
+git clone https://github.com/CoCoRoRooo/TB
+```
+
+2. Créer et activer un environnement virtuel
+```bash
+# Sur Windows
+.\venv\Scripts\activate
+```
+
+3. Installer les dépendances
 ```bash
 pip install -r requirements.txt
 ```
 
-#### Explication des dépendances :
+4. Configurer la clé API
+```bash
+echo "OPENAI_KEY=votre_cle_api" > .env
+```
 
-- **flask** → Pour créer l'API backend qui communique avec l'interface web.
-- **python-dotenv** → Pour charger des variables d'environnement depuis un fichier .env de manière sécurisée.
-- **langchain** → Pour orchestrer la chaîne RAG avec retrieval et LLM.
-- **ollama** → Pour exécuter Mistral localement.
-- **langchain_community** → Module complémentaire pour LangChain.
-- **langchain_openai** → Pour interagir avec l'API OpenAI et générer des réponses via ChatGPT.
-
-### 3️⃣ Lancement du serveur Flask
-
+5. Lancer l'application
 ```bash
 python app.py
 ```
 
-Le serveur tournera sur `http://127.0.0.1:5000/`
-
----
-
-## 📝 Explication des fichiers
-
-### **1️⃣ `tokenizer.py`** (Indexation des guides avec FAISS)
-
-Ce fichier :
-
-- Charge un fichier JSON contenant des guides techniques
-- Convertit les guides en **vecteurs** avec `HuggingFaceEmbeddings`
-- Crée une **base FAISS** pour la recherche rapide
-
-Extrait de code :
-
-```python
-embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-MiniLM-L6-v2")
-vector_store = FAISS.from_documents(documents, embedding_model)
-retriever = vector_store.as_retriever()
+6. Ouvrir votre navigateur à l'adresse
+```
+http://localhost:5000
 ```
 
----
+## 🧩 Architecture
 
-### **2️⃣ `llm.py`** (Génération de réponses avec GPT-4 ou Mistral via Ollama)
+Le système est composé de plusieurs modules interconnectés:
 
-Ce fichier :
+### Backend
+- `app.py` - Application Flask principale et API REST
+- `rag_chain.py` - Configuration des chaînes LangChain pour le RAG
+- `retriever.py` - Gestion de l'indexation et de la recherche vectorielle
+- `api_client.py` - Client pour l'API iFixit (récupération des étapes des guides)
+- `utils.py` - Fonctions utilitaires diverses
 
-- Charge les guides indexés
-- Trouve les guides les plus pertinents via FAISS
-- Génère une réponse avec **GPT-4 ou Mistral**
-- Utilise **LangChain** pour structurer le processus
+### Frontend
+- `templates/index.html` - Structure HTML de l'interface
+- `static/css/style.css` - Styles CSS personnalisés
+- `static/js/main.js` - Logique JavaScript pour les interactions utilisateur
 
-Extrait de code :
+### Scripts de collecte de données
+- `get_posts.py` - Récupération des posts Reddit du subreddit "techsupport"
+- `guides.py` - Récupération des guides techniques depuis l'API iFixit
 
-```python
-class OllamaLLM(LLM):
-    model: str = "mistral"
+## 💬 Utilisation
 
-    def _call(self, prompt: str, stop: List[str] = None) -> str:
-        response = ollama.chat(model=self.model, messages=[{"role": "user", "content": prompt}])
-        return response["message"]["content"]
-```
+1. Saisissez votre question technique dans la zone de texte en bas de l'interface
+2. Le système va:
+   - Générer plusieurs reformulations de votre question pour améliorer la recherche
+   - Récupérer les documents pertinents (posts Reddit et guides techniques)
+   - Enrichir les guides avec leurs étapes détaillées via l'API
+   - Générer une réponse structurée en se basant sur le contexte récupéré
+3. Consultez les sections dépliables pour explorer:
+   - Les requêtes alternatives générées
+   - Les documents récupérés avec leurs métadonnées
+   - Le temps de traitement pour la transparence
 
-On peut choisir le modèle utilisé en modifiant cette ligne :
+## 🔧 Technologies utilisées
 
-```python
-use_ollama = True  # Mettre à False pour utiliser OpenAI
-```
+- **Flask** - Serveur web et API REST
+- **LangChain** - Orchestration des flux RAG
+- **FAISS** - Indexation et recherche vectorielle efficace
+- **Hugging Face** - Modèle d'embeddings `sentence-transformers/all-MiniLM-L6-v2`
+- **OpenAI GPT-4.1** - Génération de requêtes et de réponses
+- **Tailwind CSS** - Framework CSS pour l'interface utilisateur
+- **PRAW** - API Reddit pour la collecte de données
 
----
+## 📝 Format des réponses
 
-### **3️⃣ `app.py`** (API Flask)
+Les réponses générées suivent une structure claire:
 
-Ce fichier :
+- **🔍 Analyse du problème** - Synthèse et compréhension de la question
+- **✅ Vérifications préalables** - Étapes de diagnostic recommandées
+- **📝 Procédure détaillée** - Instructions étape par étape pour résoudre le problème
+- **💡 Conseils supplémentaires** - Recommandations additionnelles et bonnes pratiques
+- **🔗 Sources consultées** - Références aux documents utilisés pour générer la réponse
 
-- Expose une API `POST /ask` qui prend une question et renvoie une réponse
-- Charge FAISS et le modèle de génération
+## 🛠️ Personnalisation
 
-Extrait de code :
+### Modèles
+- Pour changer le modèle d'embeddings, modifiez le paramètre `model_name` dans `retriever.py`
+- Pour changer le modèle LLM, modifiez la configuration dans `rag_chain.py`
 
-```python
-@app.route("/ask", methods=["POST"])
-def ask():
-    data = request.json
-    user_query = data.get("query", "")
+### Sources de données
+- Ajoutez de nouvelles sources en modifiant les fonctions de chargement dans `retriever.py`
+- Adaptez le format des documents dans la fonction `index_data_embeddings()`
 
-    if not user_query:
-        return jsonify({"error": "Aucune question fournie"}), 400
+### Interface utilisateur
+- Personnalisez le design en modifiant `templates/index.html` et `static/css/style.css`
+- Ajoutez de nouvelles fonctionnalités en étendant `static/js/main.js`
 
-    response = rag_chain.invoke(user_query)
-    return jsonify({"query": user_query, "response": response})
-```
+## 📊 Performance et optimisation
 
----
+- Utilisation de CUDA pour accélérer les calculs d'embeddings si disponible
+- Optimisation du retriever avec des paramètres ajustables:
+  - `chunk_size` et `chunk_overlap` pour le découpage des documents
+  - `search_type` et `search_kwargs` pour la configuration de la recherche
+- Affichage du temps de traitement pour chaque requête
 
-### **4️⃣ `index.html`** (Interface utilisateur)
+## 🙏 Remerciements
 
-Une page HTML stylisée qui permet de poser des questions via un champ de saisie et un bouton.
-
----
-
-## 🔥 Exemples d'utilisation
-
-1️⃣ **Poser une question**
-
-```json
-POST /ask
-{
-    "query": "Mon iPhone ne charge plus"
-}
-```
-
-2️⃣ **Réponse du chatbot**
-
-```json
-{
-  "response": "Essayez d'utiliser un autre câble et vérifiez le port Lightning."
-}
-```
-
----
-
-## 🎯 Améliorations possibles
-
-- ✅ Supporter d'autres modèles d'IA (Llama, Claude...)
-- ✅ Ajouter un système d'historique des questions
-- ✅ Interface utilisateur encore plus interactive
-
-🚀 **Projet clé en main pour un assistant technique intelligent !**
+- [iFixit](https://www.ifixit.com) pour leur API publique de guides techniques
+- [Reddit](https://www.reddit.com) et la communauté r/techsupport pour les discussions techniques
+- [LangChain](https://github.com/langchain-ai/langchain) pour le framework RAG
+- [HuggingFace](https://huggingface.co) pour les modèles d'embeddings
+- [OpenAI](https://openai.com) pour les modèles de langage
