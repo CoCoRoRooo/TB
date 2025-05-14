@@ -84,8 +84,6 @@ def index_data_embeddings(
     # Créer des embeddings avec LangChain
     embedding_model = HuggingFaceEmbeddings(
         model_name=model_name,
-        model_kwargs={"device": "cuda"},
-        encode_kwargs={"device": "cuda", "batch_size": 32},
     )
     vector_store = FAISS.from_documents(splits, embedding_model)
 
