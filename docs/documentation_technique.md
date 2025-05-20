@@ -1337,7 +1337,7 @@ Le système utilise:
 
 2. **Modèle de langage**:
    - OpenAI GPT-4.1
-   - Temperature de 0.5 (équilibre créativité/déterminisme)
+   - Temperature de 0.0 (déterministe)
    - Utilisé pour la génération de requêtes et la génération de réponses
 
 3. **Base vectorielle**:
