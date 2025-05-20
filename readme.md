@@ -3,21 +3,30 @@
 Un système de question-réponse intelligent basé sur l'architecture RAG (Retrieval-Augmented Generation) pour le support technique, exploitant des guides techniques et des discussions Reddit.
 
 ```
-┌─────────────────────┐     ┌───────────────────┐     ┌─────────────────────┐
-│                     │     │                   │     │                     │
-│  Interface Web      ├────►│  Moteur RAG       ├────►│  Système de         │
-│  (Flask + HTML/CSS) │     │  (LangChain)      │     │  Récupération       │
-│                     │     │                   │     │ (FAISS + Embeddings)│
-└─────────┬───────────┘     └─────────┬─────────┘     └──────────┬──────────┘
-          │                           │                          │
-          │                           │                          │
-          │                           │                          │
-          │                     ┌─────▼─────────────┐            │
-          │                     │                   │            │
-          └────────────────────►│  Client API       │◄───────────┘
-                                │  (iFixit)         │
-                                │                   │
-                                └───────────────────┘
+┌─────────────────────────────────────┐
+│         INTERFACE WEB               │
+│    (Flask + HTML/CSS + Tailwind)    │
+└────────────────────┬────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────┐
+│          MOTEUR RAG                 │
+│  (LangChain + GPT-4.1 + Prompts)    │
+└────────────────────┬────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────┐
+│     SYSTÈME DE RÉCUPÉRATION         │
+│  (FAISS + HuggingFace Embeddings)   │
+└────────────────────┬────────────────┘
+                     │
+                    ┌┴┐
+                    │ │
+                    ▼ ▲
+┌─────────────────────────────────────┐
+│        SOURCES DE DONNÉES           │
+│    (API Reddit PRAW + API iFixit)   │
+└─────────────────────────────────────┘
 ```
 
 ## ✨ Caractéristiques

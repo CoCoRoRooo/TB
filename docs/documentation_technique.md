@@ -140,7 +140,7 @@ def initialize_rag_system():
     _retriever = index_data_embeddings(posts, guides)
 
     # Initialiser le LLM
-    llm = ChatOpenAI(openai_api_key=OPENAI_KEY, model="gpt-4.1", temperature=0.5)
+    llm = ChatOpenAI(openai_api_key=OPENAI_KEY, model="gpt-4.1", temperature=0.0)
 
     # [Configuration des chaînes]
     
@@ -155,7 +155,7 @@ def initialize_rag_system():
     # Chaîne RAG complète
     _rag_chain = (
         {
-            "context": _retrieval_chain,
+            "context": _retrieval_chain | format_documents,
             "question": RunnablePassthrough(),
         }
         | final_prompt_template
@@ -187,30 +187,58 @@ Répond en Anglais
 Question initiale : {question}
 ```
 
-2. **Prompt principal RAG** (version condensée):
+2. **Prompt principal RAG:**
 ```
 L'utilisateur pose la question suivante :
 
 ➡️ {question}
 
-Tu disposes ci-dessous de guides techniques et de posts Reddit pertinents. [...]
+Tu disposes uniquement des documents suivants : des guides techniques et des posts Reddit pertinents.
+Ces contenus incluent des descriptions générales, des conseils pratiques, des solutions proposées par la communauté, et parfois des instructions techniques détaillées.
 
 🎯 Ta mission :
-- Analyse et synthétise les informations [...]
-- Fournis une réponse structurée et complète. [...]
+
+    Base strictement ta réponse sur les informations présentes dans les documents fournis ci-dessous ({context}).
+
+    N'utilise aucune connaissance extérieure. Si une information n'est pas présente, indique-le explicitement.
+
+    Fournis une réponse structurée, professionnelle et en français.
 
 📚 Sources disponibles :
+
 {context}
 
 🛠 Format de réponse attendu :
----
-🔍 Analyse du problème : [...]
-✅ Vérifications préalables recommandées : [...]
-📝 Procédure détaillée proposée : [...]
-💡 Conseils supplémentaires ou précautions à prendre : [...]
-🔗 Sources consultées : [...]
----
+
+🔍 Analyse du problème :
+
+[Présente une synthèse du problème posé, uniquement en te basant sur les documents.]
+
+✅ Vérifications préalables recommandées :
+
+[Liste les éléments à inspecter ou tester avant toute manipulation, tels que suggérés dans les documents.]
+
+📝 Procédure détaillée proposée :
+
+[Structure la procédure étape par étape : "Étape 1", "Étape 2"… en t'appuyant sur les guides ou les conseils Reddit.]
+
+💡 Conseils ou précautions à prendre :
+
+[Ajoute ici uniquement les recommandations explicitement mentionnées dans les documents.]
+
+🔗 Sources consultées :
+
+[Liste les URL des documents (guides ou posts Reddit) utilisés pour construire la réponse, selon les métadonnées disponibles.]
+
+📌 Important :
+Tu dois strictement t'appuyer sur les contenus fournis dans {context}.
+Aucune inférence ou ajout personnel n'est autorisé. Si la réponse n'est pas déductible des documents, indique-le clairement.
 ```
+
+#### Configuration du LLM et contraintes d'information
+   - Le modèle LLM (gpt-4.1) est configuré avec une température de 0.0 pour garantir des réponses déterministes et cohérentes.
+   - Le prompt final est spécifiquement conçu pour forcer le LLM à utiliser uniquement les informations provenant des documents récupérés via le retriever, avec des instructions explicites de ne pas utiliser de connaissances externes.
+   - Le système intègre une fonction de débogage (debug_context) qui affiche le contenu du contexte avant traitement par le LLM, permettant de vérifier les documents utilisés pour la génération.
 
 ### retriever.py
 
@@ -377,7 +405,7 @@ Cette fonction:
 
 ### templates/index.html
 
-Ce fichier définit l'interface utilisateur principale de l'application, présentant un design moderne et réactif.
+Ce fichier définit l'interface utilisateur principale de l'application, présentant un design moderne avec une structure à deux panneaux.
 
 #### Structure principale:
 
@@ -387,53 +415,92 @@ Ce fichier définit l'interface utilisateur principale de l'application, présen
   <head>
     <!-- Métadonnées et liens vers CSS/JS externes -->
   </head>
-  <body class="bg-gradient-to-br from-gray-50 to-gray-100 font-sans">
-    <div class="container mx-auto px-4 py-6 max-w-6xl">
-      <!-- En-tête avec titre et contrôles -->
-      <header>...</header>
+  <body>
+    <div class="app-container">
+      <!-- Sidebar -->
+      <div class="sidebar bg-white">
+        <!-- Logo et titre -->
+        <div class="p-4">
+          <div class="flex items-center mb-6">
+            <!-- Logo et titre de l'application -->
+          </div>
 
-      <!-- Zone de chat -->
-      <div class="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100 chat-container">
-        <!-- En-tête du chat -->
-        <div class="bg-gradient-to-r from-indigo-600 to-blue-500 px-6 py-4 text-white">...</div>
+          <!-- Indicateur de temps de traitement -->
+          <div class="flex items-center bg-indigo-50 py-2 px-3 rounded-lg mb-4">
+            <!-- Affichage du temps de traitement -->
+          </div>
 
-        <!-- Messages -->
-        <div id="chat-messages" class="chat-messages p-4 bg-gray-50">
-          <!-- Message de bienvenue -->
-          <div class="message message-bot">...</div>
+          <!-- Boutons de toggle pour les requêtes et documents -->
+          <div class="flex space-x-2 mb-4">
+            <!-- Boutons pour montrer/cacher les panneaux -->
+          </div>
+
+          <!-- Conteneur pour les requêtes alternatives -->
+          <div id="queries-container" class="queries-container mb-4 bg-indigo-50 rounded-xl p-3 border border-indigo-100">
+            <!-- Liste des requêtes générées -->
+          </div>
+
+          <!-- Conteneur pour les documents récupérés -->
+          <div id="documents-container" class="documents-container bg-blue-50 rounded-xl p-3 border border-blue-100">
+            <!-- Liste des documents utilisés pour la réponse -->
+          </div>
         </div>
 
-        <!-- Zone de saisie -->
-        <div class="p-4 border-t border-gray-100">
-          <div class="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-200">
-            <input id="user-input" type="text" class="flex-grow bg-transparent border-none focus:outline-none px-4 py-3 text-gray-700" placeholder="Posez votre question technique ici..." />
-            <button id="send-button" class="bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white rounded-lg p-3 transition-all shadow-md">
-              <i class="fas fa-paper-plane"></i>
-            </button>
-          </div>
+        <!-- Footer de la sidebar -->
+        <div class="mt-auto p-4 text-center text-gray-500 text-xs">
+          <!-- Informations de copyright et technologie -->
         </div>
       </div>
 
-      <!-- Pied de page -->
-      <footer>...</footer>
-    </div>
+      <!-- Contenu principal - Chat -->
+      <div class="main-content">
+        <!-- En-tête du chat -->
+        <div class="chat-header">
+          <!-- Bouton toggle sidebar et indicateur de statut -->
+        </div>
+        
+        <!-- Zone de chat avec défilement -->
+        <div class="chat-container bg-gray-50">
+          <!-- Messages -->
+          <div id="chat-messages" class="chat-messages">
+            <!-- Message de bienvenue et historique des messages -->
+          </div>
 
-    <!-- Script principal -->
-    <script src="/static/js/main.js"></script>
+          <!-- Zone de saisie fixe en bas -->
+          <div class="chat-input-container">
+            <!-- Champ de texte et bouton d'envoi -->
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>
 ```
 
 #### Caractéristiques principales:
 
-1. **Structure responsive** - Utilise Tailwind CSS pour une mise en page adaptative
-2. **Interface moderne** - Design avec dégradés, ombres et arrondis
-3. **Visualisation des données RAG** - Panneaux pliables pour:
-   - Requêtes alternatives générées
-   - Documents récupérés avec leurs métadonnées
-4. **Suivi des performances** - Affichage du temps de traitement
-5. **Support pour Markdown** - Utilise marked.js pour le rendu du contenu formaté
-6. **Sécurité intégrée** - DOMPurify pour la sanitisation du contenu
+1. **Interface à deux panneaux:**
+   - Panneau latéral (sidebar) contenant les métriques et données RAG
+   - Panneau principal contenant l'interface de chat
+2. **Sidebar informative:**
+   - Indicateur de temps de traitement
+   - Panneaux pliables pour les requêtes alternatives générées
+   - Visualisation des documents récupérés avec leurs métadonnées
+3. **Interface de chat moderne:**
+   - En-tête avec indicateur de statut
+   - Zone de messages avec support pour le Markdown
+   - Barre de saisie fixe en bas pour une expérience utilisateur fluide
+4. **Éléments interactifs:**
+   - Bouton pour basculer l'affichage de la sidebar
+   - Boutons de toggle pour les sections de requêtes et documents
+   - Visualisation structurée des documents sources
+5. **Dépendances externes:**
+   - Font Awesome pour les icônes
+   - Tailwind CSS pour les styles responsive
+   - Marked.js pour le rendu du Markdown
+   - DOMPurify pour la sécurité du contenu HTML
+  
+Cette interface est conçue pour mettre en évidence à la fois l'expérience conversationnelle et la transparence du système RAG, permettant aux utilisateurs de consulter les sources et le processus de génération des réponses.
 
 ### static/css/style.css
 
@@ -441,16 +508,19 @@ Ce fichier contient les styles personnalisés pour l'application, complémentant
 
 #### Catégories de styles:
 
-1. **Styles de base**:
+1. **Styles de base:**
 ```css
 body {
     font-family: 'Poppins', sans-serif;
     color: #333;
     line-height: 1.6;
+    height: 100vh;
+    overflow: hidden;
 }
 ```
+Ces styles fondamentaux définissent la typographie principale (Poppins) et la couleur de texte de l'application. La propriété `height: 100vh` assure que l'application occupe toute la hauteur de l'écran, tandis que `overflow: hidden` empêche le défilement au niveau de la page, garantissant une interface de type application plutôt qu'un site web traditionnel avec défilement.
 
-2. **Animations**:
+2. **Animations:**
 ```css
 /* Animation de chargement */
 .loading-dots:after {
@@ -476,13 +546,76 @@ body {
     100% { box-shadow: 0 0 0 0 rgba(72, 187, 120, 0); }
 }
 ```
+Cette section définit deux animations essentielles pour l'interface : un effet de points de chargement (loading-dots) qui simule visuellement l'activité du chatbot lors du traitement, et une animation de pulsation (pulse) créant un effet de "battement" sur certains éléments pour attirer l'attention de l'utilisateur. Ces animations améliorent le retour visuel et donnent une impression de système vivant et réactif.
 
-3. **Mise en page du chat**:
+3. **Layout et structure de l'application:**
 ```css
-.chat-container {
-    height: calc(100vh - 230px);
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+}
+
+.sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    height: 100vh;
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+    border-right: 1px solid #e2e8f0;
+}
+
+.main-content {
+    flex-grow: 1;
+    height: 100vh;
     display: flex;
     flex-direction: column;
+}
+```
+Cette section établit la structure principale de l'application en utilisant Flexbox. Le conteneur app-container divise l'interface en deux zones principales : une sidebar de largeur fixe (280px) et une zone de contenu principal qui s'étend pour occuper l'espace restant. La sidebar peut défiler verticalement si son contenu dépasse la hauteur de l'écran, tandis qu'une transition fluide est définie pour son animation de fermeture/ouverture.
+
+4. **Gestion de la sidebar:**
+```css
+.toggle-sidebar {
+    position: static;
+    border: none;
+    background: transparent;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.sidebar-collapsed .sidebar {
+    margin-left: -280px;
+}
+
+.sidebar-collapsed .chat-input-container {
+    left: 0;
+}
+```
+Ces styles gèrent le comportement de la sidebar, notamment sa capacité à se réduire et s'étendre. Le bouton toggle-sidebar est stylisé pour s'intégrer harmonieusement à l'en-tête, avec un effet de survol subtil. Lorsque la classe sidebar-collapsed est appliquée à l'élément parent, la sidebar se déplace hors de l'écran grâce à une marge négative, et la zone de saisie du chat s'ajuste automatiquement pour occuper toute la largeur disponible, optimisant ainsi l'espace d'affichage.
+
+5. **Interface de chat:**
+```css
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.chat-header {
+    background: linear-gradient(to right, #4f46e5, #3b82f6);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: white;
 }
 
 .chat-messages {
@@ -490,11 +623,26 @@ body {
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(79, 70, 229, 0.2) transparent;
-    position: relative;
+    padding: 1rem;
+    padding-bottom: 80px;
+}
+
+.chat-input-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    background-color: white;
+    border-top: 1px solid #e2e8f0;
+    z-index: 10;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
 }
 ```
+Cette section définit l'apparence et le comportement de l'interface de chat principale. L'en-tête utilise un dégradé élégant de couleurs indigo/bleu pour un effet visuel attrayant. La zone de messages est configurée pour défiler automatiquement, avec des barres de défilement stylisées et discrètes. Un espace supplémentaire est ajouté en bas (padding-bottom: 80px) pour éviter que les derniers messages ne soient masqués par la zone de saisie. La zone de saisie est fixée en bas de l'écran avec un effet d'ombre subtil, garantissant qu'elle reste toujours accessible pendant le défilement de la conversation.
 
-4. **Styles des messages**:
+6. **Styles des messages:**
 ```css
 .message {
     max-width: 85%;
@@ -502,6 +650,28 @@ body {
     display: flex;
     position: relative;
     animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    flex-shrink: 0;
 }
 
 .message-bot .message-avatar {
@@ -515,12 +685,73 @@ body {
     color: white;
     box-shadow: 0 4px 6px rgba(16, 185, 129, 0.15);
 }
-```
 
-5. **Rendu du Markdown**:
+.message-content {
+    background-color: #fff;
+    padding: 12px 16px;
+    border-radius: 16px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+.message-user {
+    margin-left: auto;
+    flex-direction: row-reverse;
+}
+
+.message-user .message-content {
+    background-color: #ecfdf5;
+    border-top-right-radius: 4px;
+    border-right: 1px solid rgba(16, 185, 129, 0.1);
+    border-top: 1px solid rgba(16, 185, 129, 0.1);
+}
+```
+Cette section détaille la présentation des messages dans la conversation. Chaque message apparaît avec une animation d'entrée fluide (fadeIn) pour une expérience plus dynamique. Les avatars utilisent des dégradés distincts pour différencier visuellement l'utilisateur (vert) du bot (indigo/bleu). Les messages de l'utilisateur sont alignés à droite avec une structure inversée (flex-direction: row-reverse) et un fond légèrement teinté, tandis que les messages du bot sont alignés à gauche avec un fond blanc. Des détails subtils comme les rayons de bordure asymétriques et les ombres légères ajoutent de la profondeur et de l'élégance à l'interface.
+
+7. **Affichage des requêtes et documents:**
+```css
+.queries-container,
+.documents-container {
+    display: none;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+.document-item {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+}
+
+.document-content,
+.document-full-content {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+    max-width: 100%;
+}
+```
+Ces styles configurent les panneaux pliables dans la sidebar qui affichent les requêtes alternatives et les documents sources. Par défaut, ces panneaux sont masqués (display: none) et s'affichent avec une transition fluide lorsqu'ils sont activés. Une hauteur maximale et un défilement vertical sont définis pour contenir efficacement de grandes quantités d'informations sans perturber la mise en page. Diverses propriétés de gestion du texte (word-wrap, word-break, hyphens) garantissent que les longs mots et URLs ne débordent pas des conteneurs, assurant ainsi une présentation soignée des documents et requêtes.
+
+8. **Rendu du Markdown:**
 ```css
 .markdown-body h1 {
     font-size: 1.75rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: #1e293b;
+}
+
+.markdown-body h2 {
+    font-size: 1.5rem;
     font-weight: 600;
     margin-top: 1.5rem;
     margin-bottom: 0.75rem;
@@ -537,8 +768,9 @@ body {
     border: 1px solid #e2e8f0;
 }
 ```
+Cette section définit le formatage des éléments Markdown dans les réponses du chatbot. Les titres sont stylisés avec des tailles et des poids spécifiques pour une hiérarchie visuelle claire. Les blocs de code utilisent une police monospace distinctive avec un fond gris clair et une bordure subtile, rendant le code facilement identifiable. La couleur indigo du texte de code maintient la cohérence avec le thème de couleur global de l'application. Ces styles permettent aux réponses complexes contenant du texte formaté d'être présentées de manière claire et professionnelle.
 
-6. **Styles des sections de réponse**:
+9. **Sections spécifiques et composants visuels:**
 ```css
 .problem-analysis,
 .checks,
@@ -557,16 +789,54 @@ body {
     background-color: #eef2ff;
     border-left: 4px solid #4f46e5;
 }
-```
 
-7. **Responsive design**:
+.checks {
+    background-color: #ecfdf5;
+    border-left: 4px solid #10b981;
+}
+
+.procedure {
+    background-color: #fff7ed;
+    border-left: 4px solid #f97316;
+}
+
+.tips {
+    background-color: #eff6ff;
+    border-left: 4px solid #3b82f6;
+}
+
+.sources {
+    background-color: #f8fafc;
+    border-left: 4px solid #64748b;
+}
+```
+Ces styles créent des sections visuellement distinctes dans les réponses du chatbot pour différents types d'informations. Chaque type de section (analyse de problème, vérifications, procédure, conseils, sources) reçoit un code couleur unique avec un fond pâle et une bordure gauche accentuée. Cette approche de codage couleur améliore considérablement la lisibilité et permet aux utilisateurs d'identifier rapidement les différents types d'informations dans les réponses complexes. L'ombre légère et les coins arrondis ajoutent une profondeur subtile, séparant visuellement ces sections du reste du contenu.
+
+10. **Responsive design:**
 ```css
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+    
     .message {
         max-width: 95%;
     }
+    
+    .chat-input-container {
+        left: 0;
+        padding: 0.75rem;
+    }
+    
+    .input-wrapper {
+        width: 100%;
+        max-width: 100%;
+        display: flex;
+        align-items: center;
+    }
 }
 ```
+Cette section assure que l'interface s'adapte élégamment aux appareils mobiles et aux écrans plus petits. Sur les écrans étroits (jusqu'à 768px), la sidebar est automatiquement masquée pour maximiser l'espace de conversation. Les messages peuvent occuper une plus grande largeur (95% au lieu de 85%), et la zone de saisie est ajustée avec un rembourrage réduit pour maintenir l'utilisabilité sur les petits écrans. L'input-wrapper est configuré pour s'étendre complètement et maintenir l'alignement vertical des éléments. Ces ajustements garantissent une expérience utilisateur cohérente sur tous les appareils, des ordinateurs de bureau aux smartphones.
 
 ### static/js/main.js
 
@@ -627,36 +897,40 @@ Ajoute un nouveau message dans la conversation avec des styles différents selon
 ##### addTypingEffect()
 ```javascript
 async function addTypingEffect(element, content) {
-    // Paramètres ajustés pour un effet visuel plus naturel mais pas trop lent
+    // Paramètres ajustés pour un effet visuel plus naturel 
     const minDelay = 10;   // Délai minimum entre les caractères (ms)
     const maxDelay = 25;   // Délai maximum entre les caractères (ms)
-    
+    const chunkSize = 3;   // Nombre de caractères à traiter par itération
+    const fastModeThreshold = 800; // Seuil à partir duquel on accélère le traitement
+
     // Mode accéléré pour les contenus longs
     const fastMode = content.length > fastModeThreshold;
-    
-    // Diviser le contenu en segments pour préserver le formatage markdown
-    const segments = preprocessContentForTyping(content)
-    // ...
-}
-```
-Crée un effet de frappe en temps réel pour simuler une réponse progressive du chatbot. La fonction adapte intelligemment sa vitesse selon la longueur du contenu et gère les segments spéciaux du texte pour préserver le formatage.
 
-##### preprocessContentForTyping()
-```javascript
-function preprocessContentForTyping(content) {
-    const segments = []
-    
-    // Expressions régulières pour détecter les structures markdown complexes
-    const patterns = [
-        // Sections spéciales
-        /🔍\s*\*\*Analyse du problème\*\*\s*:.+?(?=✅\s*\*\*Vérifications|📝\s*\*\*Procédure|💡\s*\*\*Conseils|🔗\s*\*\*Sources|$)/s,
-        // Autres patterns...
-    ]
-    // ...
-    return segments
+    // Pour les longs textes ou le mode rapide, traitement par chunks plus grands
+    if (fastMode) {
+        for (let i = 0; i < content.length; i += chunkSize * 2) {
+            const endPos = Math.min(i + chunkSize * 2, content.length);
+            currentText += content.substring(i, endPos);
+            element.innerHTML = formatMarkdown(currentText);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            await new Promise(resolve => setTimeout(resolve, 5));
+        }
+    } else {
+        // Mode normal avec effet de frappe visible
+        for (let i = 0; i < content.length; i += chunkSize) {
+            const endPos = Math.min(i + chunkSize, content.length);
+            currentText += content.substring(i, endPos);
+            element.innerHTML = formatMarkdown(currentText);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            await new Promise(resolve => setTimeout(resolve,
+                Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay));
+        }
+    }
 }
 ```
-Pré-traite le contenu pour l'effet de frappe en identifiant les segments spéciaux (markdown complexe, sections formatées, code) pour les afficher de manière optimisée.
+Cette fonction crée un effet de frappe en temps réel pour simuler une réponse progressive du chatbot. Elle adapte intelligemment sa vitesse selon la longueur du contenu, avec un mode rapide pour les réponses longues et un mode normal pour les réponses courtes qui affiche le texte caractère par caractère avec des délais variables.
 
 ##### addLoadingMessage() et removeLoadingMessage()
 ```javascript
@@ -673,6 +947,16 @@ function addLoadingMessage() {
         </div>
     `
     // ...
+}
+```
+
+```javascript
+// Fonction pour supprimer le message de chargement
+function removeLoadingMessage() {
+    const loadingMessage = document.getElementById('loading-message')
+    if (loadingMessage) {
+        loadingMessage.remove()
+    }
 }
 ```
 Affiche et supprime un indicateur animé de chargement pendant le traitement des requêtes.
@@ -717,8 +1001,26 @@ function formatDocumentContent(docText) {
         <!-- ... -->
     `
 }
+// Gestion du toggle pour les documents
+toggleDocuments.addEventListener('click', function () {
+    // Animation d'ouverture/fermeture
+})
 
-// Gestion du toggle pour les documents et délégation d'événements
+// Délégation d'événements pour les boutons "Voir détails"
+documentsList.addEventListener('click', function (e) {
+    if (e.target.classList.contains('view-more-btn') || e.target.parentElement.classList.contains('view-more-btn')) {
+        const button = e.target.classList.contains('view-more-btn') ? e.target : e.target.parentElement
+        const fullContent = button.nextElementSibling
+
+        if (fullContent.classList.contains('hidden')) {
+            fullContent.classList.remove('hidden')
+            button.innerHTML = '<i class="fas fa-eye-slash mr-1"></i> Masquer détails'
+        } else {
+            fullContent.classList.add('hidden')
+            button.innerHTML = '<i class="fas fa-eye mr-1"></i> Voir détails'
+        }
+    }
+})
 ```
 Ces fonctions gèrent l'affichage, le formatage et les interactions avec la section des documents récupérés. Inclut des fonctionnalités comme l'affichage/masquage des détails et des animations fluides.
 
@@ -755,6 +1057,58 @@ async function sendMessage() {
 ```
 Fonction centrale qui envoie les messages utilisateur à l'API, affiche les réponses et met à jour l'interface utilisateur en conséquence. Gère l'état de l'interface pendant les communications avec le serveur.
 
+##### Gestion responsive et toggle de la sidebar
+```javascript
+// Vérifier si on est en mode mobile au chargement
+function checkMobileView() {
+    if (window.innerWidth <= 768) {
+        appContainer.classList.add('sidebar-collapsed');
+
+        // Mettre à jour l'icône
+        const icon = sidebarToggle.querySelector('i');
+        icon.classList.remove('fa-chevron-left');
+        icon.classList.add('fa-chevron-right');
+
+        // S'assurer que la sidebar est bien masquée
+        sidebar.style.transform = 'translateX(-100%)';
+    } else {
+        // En mode desktop, s'assurer que la sidebar est visible
+        sidebar.style.transform = 'translateX(0)';
+    }
+}
+
+// Toggle sidebar avec correction pour mobile
+sidebarToggle.addEventListener('click', function () {
+    appContainer.classList.toggle('sidebar-collapsed');
+    const icon = sidebarToggle.querySelector('i');
+
+    if (appContainer.classList.contains('sidebar-collapsed')) {
+        icon.classList.remove('fa-chevron-left');
+        icon.classList.add('fa-chevron-right');
+        // Animation fluide pour la sidebar
+        sidebar.style.transform = 'translateX(-100%)';
+    } else {
+        icon.classList.remove('fa-chevron-right');
+        icon.classList.add('fa-chevron-left');
+        // Animation fluide pour la sidebar
+        sidebar.style.transform = 'translateX(0)';
+    }
+
+    // Ajuster la position du conteneur d'input
+    const chatInputContainer = document.querySelector('.chat-input-container');
+    if (appContainer.classList.contains('sidebar-collapsed')) {
+        chatInputContainer.style.left = '0';
+    } else {
+        if (window.innerWidth > 768) {
+            chatInputContainer.style.left = '280px';
+        } else {
+            chatInputContainer.style.left = '0';
+        }
+    }
+});
+```
+Gère le comportement responsive de l'application, avec une détection automatique du mode mobile et des ajustements dynamiques pour la sidebar. Le système vérifie la taille de l'écran au chargement et lors du redimensionnement, avec des états adaptés entre mobile et desktop pour maximiser l'expérience utilisateur sur tous les appareils.
+
 #### Caractéristiques notables:
 
 1. **Animations et transitions fluides**:
@@ -781,6 +1135,12 @@ Fonction centrale qui envoie les messages utilisateur à l'API, affiche les rép
    - Système de visualisation des détails des documents
    - Formatage adaptatif selon le type de contenu
    - Affichage optimisé des métadonnées
+
+6. **Optimisations responsive design**:
+   - Détection automatique des appareils mobiles
+   - Adaptation dynamique de l'interface selon la taille d'écran
+   - Comportement différencié de la sidebar sur mobile/desktop
+   - Gestion des événements de redimensionnement
 
 ## Scripts de collecte de données
 ### get_posts.py
@@ -991,10 +1351,10 @@ L'interface utilisateur du système est construite avec les technologies web mod
 
 ### Caractéristiques principales:
 
-1. **Design adaptatif**:
-   - Mise en page responsive qui s'adapte aux différentes tailles d'écran
-   - Utilisation de Tailwind CSS pour les styles de base
-   - Styles personnalisés pour les animations et composants spécifiques
+1. **Disposition à deux panneaux**:
+   - Panneau latéral (sidebar) pour les informations techniques et données RAG
+   - Panneau principal pour l'interface de chat conversationnelle
+   - Design responsive avec possibilité de masquer la sidebar sur petits écrans
 
 2. **Organisation visuelle**:
    - Interface de chat familière avec messages utilisateur/bot différenciés
@@ -1002,14 +1362,15 @@ L'interface utilisateur du système est construite avec les technologies web mod
    - Panneaux pliables pour les informations techniques (requêtes, documents)
 
 3. **Visualisation des données RAG**:
-   - Affichage des requêtes alternatives générées
-   - Présentation des documents récupérés avec métadonnées
-   - Indicateur de temps de traitement pour la transparence
+   - Panneau dédié aux requêtes alternatives générées
+   - Présentation des documents récupérés avec système de visualisation détaillée
+   - Indicateur de temps de traitement pour la transparence du processus
 
 4. **Fonctionnalités avancées**:
-   - Rendu Markdown pour les réponses structurées
-   - Différenciation visuelle des sections de réponse (analyse, procédure, etc.)
-   - Animations subtiles pour améliorer l'expérience (chargement, messages)
+   - Tailwind CSS pour le design responsive et moderne
+   - Font Awesome pour l'iconographie cohérente
+   - Marked.js pour le rendu Markdown des réponses complexes
+   - DOMPurify pour garantir la sécurité du contenu généré
 
 5. **Composants JavaScript**:
    - `main.js` gère les interactions utilisateur

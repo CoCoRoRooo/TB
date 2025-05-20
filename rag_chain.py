@@ -42,6 +42,13 @@ def get_retrieval_chain():
     return _retrieval_chain
 
 
+def debug_context(context):
+    print("=== CONTENU DU CONTEXT ===")
+    print(context)
+    print("==========================")
+    return context
+
+
 def initialize_rag_system():
     """Initialise le système RAG avec les chaînes de traitement"""
     global _retriever, _rag_chain, _generate_queries, _retrieval_chain
@@ -67,17 +74,16 @@ L'utilisateur pose la question suivante :
 
 ➡️ {question}
 
-Tu disposes ci-dessous de guides techniques et de posts Reddit pertinents. Ces contenus incluent des descriptions générales, des conseils pratiques, des solutions proposées par la communauté, et parfois des instructions techniques détaillées.
+Tu disposes uniquement des documents suivants : des guides techniques et des posts Reddit pertinents.
+Ces contenus incluent des descriptions générales, des conseils pratiques, des solutions proposées par la communauté, et parfois des instructions techniques détaillées.
 
 🎯 Ta mission :
 
-- Analyse et synthétise les informations issues des guides techniques et des posts Reddit pour répondre à la question.
+    Base strictement ta réponse sur les informations présentes dans les documents fournis ci-dessous ({context}).
 
-- Fournis une réponse structurée et complète.
+    N'utilise aucune connaissance extérieure. Si une information n’est pas présente, indique-le explicitement.
 
-- Utilise les étapes décrites dans les guides techniques, si présentes, et les solutions suggérées par les utilisateurs dans les posts Reddit.
-
-- Répond en Français
+    Fournis une réponse structurée, professionnelle et en français.
 
 📚 Sources disponibles :
 
@@ -85,31 +91,29 @@ Tu disposes ci-dessous de guides techniques et de posts Reddit pertinents. Ces c
 
 🛠 Format de réponse attendu :
 
----
-
 🔍 Analyse du problème :
 
-[Présente une synthèse du problème posé, en te basant sur les informations extraites des documents.]
+[Présente une synthèse du problème posé, uniquement en te basant sur les documents.]
 
 ✅ Vérifications préalables recommandées :
 
-[Liste les éléments à inspecter ou tester avant de commencer les manipulations.]
+[Liste les éléments à inspecter ou tester avant toute manipulation, tels que suggérés dans les documents.]
 
 📝 Procédure détaillée proposée :
 
-[Utilise les étapes comme "Step 1", "Step 2" pour les guides iFixit, ou les conseils donnés dans les posts Reddit.]
+[Structure la procédure étape par étape : “Étape 1”, “Étape 2”… en t’appuyant sur les guides ou les conseils Reddit.]
 
-💡 Conseils supplémentaires ou précautions à prendre :
+💡 Conseils ou précautions à prendre :
 
-[Ajoute des conseils supplémentaires tirés des guides ou des commentaires des utilisateurs.]
+[Ajoute ici uniquement les recommandations explicitement mentionnées dans les documents.]
 
 🔗 Sources consultées :
 
-[Indique ici les URL des documents (guides ou posts Reddit) ayant servi à construire ta réponse. Utilise les URLs disponibles dans les métadonnées des documents fournis.]
+[Liste les URL des documents (guides ou posts Reddit) utilisés pour construire la réponse, selon les métadonnées disponibles.]
 
----
-
-🎯 Important : Structure ta réponse de manière fluide, concise, et professionnelle. Mentionne les sources utilisées, telles que l'URL du guide ou du post Reddit.
+📌 Important :
+Tu dois strictement t'appuyer sur les contenus fournis dans {context}.
+Aucune inférence ou ajout personnel n’est autorisé. Si la réponse n’est pas déductible des documents, indique-le clairement.
 """,
     )
 
@@ -130,7 +134,7 @@ Question initiale : {question}
     )
 
     # Initialiser le LLM
-    llm = ChatOpenAI(openai_api_key=OPENAI_KEY, model="gpt-4.1", temperature=0.5)
+    llm = ChatOpenAI(openai_api_key=OPENAI_KEY, model="gpt-4.1", temperature=0.0)
 
     # Chaîne de génération de requêtes
     _generate_queries = (
@@ -143,7 +147,9 @@ Question initiale : {question}
     # Chaîne RAG complète
     _rag_chain = (
         {
-            "context": _retrieval_chain,
+            "context": _retrieval_chain
+            | format_documents
+            | (lambda x: debug_context(x)),
             "question": RunnablePassthrough(),
         }
         | final_prompt_template

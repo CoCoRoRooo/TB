@@ -9,8 +9,76 @@ document.addEventListener('DOMContentLoaded', function () {
     const documentsContainer = document.getElementById('documents-container')
     const documentsList = document.getElementById('documents-list')
     const toggleDocuments = document.getElementById('toggle-documents')
+    const sidebarToggle = document.getElementById('sidebar-toggle')
+    const appContainer = document.querySelector('.app-container')
+    const sidebar = document.querySelector('.sidebar')
 
-    // Fonction pour formater le texte markdown de manière améliorée
+    // Vérifier si on est en mode mobile au chargement
+    function checkMobileView() {
+        if (window.innerWidth <= 768) {
+            appContainer.classList.add('sidebar-collapsed');
+
+            // Mettre à jour l'icône
+            const icon = sidebarToggle.querySelector('i');
+            icon.classList.remove('fa-chevron-left');
+            icon.classList.add('fa-chevron-right');
+
+            // S'assurer que la sidebar est bien masquée
+            sidebar.style.transform = 'translateX(-100%)';
+        } else {
+            // En mode desktop, s'assurer que la sidebar est visible
+            sidebar.style.transform = 'translateX(0)';
+        }
+    }
+
+    // Exécuter au chargement
+    checkMobileView();
+
+    // Exécuter aussi lors du redimensionnement de la fenêtre
+    window.addEventListener('resize', checkMobileView);
+
+    window.addEventListener('resize', function () {
+        const chatInputContainer = document.querySelector('.chat-input-container');
+
+        if (window.innerWidth <= 768 || appContainer.classList.contains('sidebar-collapsed')) {
+            chatInputContainer.style.left = '0';
+        } else {
+            chatInputContainer.style.left = '280px';
+        }
+    });
+
+    // Toggle sidebar avec correction pour mobile
+    sidebarToggle.addEventListener('click', function () {
+        appContainer.classList.toggle('sidebar-collapsed');
+        const icon = sidebarToggle.querySelector('i');
+
+        if (appContainer.classList.contains('sidebar-collapsed')) {
+            icon.classList.remove('fa-chevron-left');
+            icon.classList.add('fa-chevron-right');
+            // Animation fluide pour la sidebar
+            sidebar.style.transform = 'translateX(-100%)';
+        } else {
+            icon.classList.remove('fa-chevron-right');
+            icon.classList.add('fa-chevron-left');
+            // Animation fluide pour la sidebar
+            sidebar.style.transform = 'translateX(0)';
+        }
+
+        const chatInputContainer = document.querySelector('.chat-input-container');
+        if (appContainer.classList.contains('sidebar-collapsed')) {
+            // Si la sidebar est fermée
+            chatInputContainer.style.left = '0';
+        } else {
+            // Si la sidebar est ouverte
+            if (window.innerWidth > 768) {
+                chatInputContainer.style.left = '280px';
+            } else {
+                chatInputContainer.style.left = '0';
+            }
+        }
+    });
+
+    // Fonction pour formater le texte markdown
     function formatMarkdown(text) {
         // Formatage spécial pour les sections du format de réponse attendu
         text = text.replace(/🔍\s*\*\*Analyse du problème\*\*\s*:/g, '<div class="problem-analysis"><strong>🔍 Analyse du problème :</strong>')
@@ -77,59 +145,41 @@ document.addEventListener('DOMContentLoaded', function () {
         return { messageDiv, innerDiv }
     }
 
-    // AMÉLIORATION: Fonction pour ajouter l'effet de frappe en temps réel avec vitesse équilibrée
+    // Fonction pour ajouter l'effet de frappe en temps réel
     async function addTypingEffect(element, content) {
-        // Paramètres ajustés pour un effet visuel plus naturel mais pas trop lent
+        // Paramètres ajustés pour un effet visuel plus naturel 
         const minDelay = 10;   // Délai minimum entre les caractères (ms)
         const maxDelay = 25;   // Délai maximum entre les caractères (ms)
-
-        // Configuration pour traiter de grands blocs de texte
-        const chunkSize = 3;   // Nombre de caractères à traiter par itération (réduit pour effet plus visible)
+        const chunkSize = 3;   // Nombre de caractères à traiter par itération
         const fastModeThreshold = 800; // Seuil à partir duquel on accélère le traitement
 
         // Mode accéléré pour les contenus longs
         const fastMode = content.length > fastModeThreshold;
 
-        // Diviser le contenu en segments pour préserver le formatage markdown
-        const segments = preprocessContentForTyping(content)
-        let currentText = ''
+        // Traitement du contenu
+        let currentText = '';
 
-        // Appliquer l'effet de typing pour chaque segment
-        for (const segment of segments) {
-            if (segment.type === 'text') {
-                if (fastMode) {
-                    // Pour les longs textes, on traite par chunks plus grands mais avec délai visible
-                    for (let i = 0; i < segment.content.length; i += chunkSize * 2) {
-                        const endPos = Math.min(i + chunkSize * 2, segment.content.length);
-                        currentText += segment.content.substring(i, endPos);
-                        element.innerHTML = formatMarkdown(currentText);
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
-
-                        // Délai réduit mais perceptible pour maintenir l'effet visuel
-                        await new Promise(resolve => setTimeout(resolve,
-                            Math.floor(Math.random() * (15 - 5 + 1)) + 5));
-                    }
-                } else {
-                    // Mode normal avec effet de frappe visible
-                    for (let i = 0; i < segment.content.length; i += chunkSize) {
-                        const endPos = Math.min(i + chunkSize, segment.content.length);
-                        currentText += segment.content.substring(i, endPos);
-                        element.innerHTML = formatMarkdown(currentText);
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
-
-                        // Délai aléatoire pour un effet naturel de frappe
-                        await new Promise(resolve => setTimeout(resolve,
-                            Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay));
-                    }
-                }
-            } else {
-                // Pour les sections spéciales ou le formatage complexe
-                currentText += segment.content;
+        // Version simplifiée pour cette démo
+        if (fastMode) {
+            // Pour les longs textes, on traite par chunks plus grands
+            for (let i = 0; i < content.length; i += chunkSize * 2) {
+                const endPos = Math.min(i + chunkSize * 2, content.length);
+                currentText += content.substring(i, endPos);
                 element.innerHTML = formatMarkdown(currentText);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
 
-                // Pause plus marquée après les blocs spéciaux pour permettre à l'utilisateur de les remarquer
-                await new Promise(resolve => setTimeout(resolve, 40));
+                await new Promise(resolve => setTimeout(resolve, 5));
+            }
+        } else {
+            // Mode normal avec effet de frappe visible
+            for (let i = 0; i < content.length; i += chunkSize) {
+                const endPos = Math.min(i + chunkSize, content.length);
+                currentText += content.substring(i, endPos);
+                element.innerHTML = formatMarkdown(currentText);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                await new Promise(resolve => setTimeout(resolve,
+                    Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay));
             }
         }
 
@@ -138,76 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // Fonction pour prétraiter le contenu et identifier les segments spéciaux
-    function preprocessContentForTyping(content) {
-        const segments = []
-
-        // Expressions régulières pour détecter les structures markdown complexes
-        const patterns = [
-            // Sections spéciales
-            /🔍\s*\*\*Analyse du problème\*\*\s*:.+?(?=✅\s*\*\*Vérifications|📝\s*\*\*Procédure|💡\s*\*\*Conseils|🔗\s*\*\*Sources|$)/s,
-            /✅\s*\*\*Vérifications préalables recommandées\*\*\s*:.+?(?=📝\s*\*\*Procédure|💡\s*\*\*Conseils|🔗\s*\*\*Sources|$)/s,
-            /📝\s*\*\*Procédure détaillée proposée\*\*\s*:.+?(?=💡\s*\*\*Conseils|🔗\s*\*\*Sources|$)/s,
-            /💡\s*\*\*Conseils supplémentaires ou précautions à prendre\*\*\s*:.+?(?=🔗\s*\*\*Sources|$)/s,
-            /🔗\s*\*\*Sources consultées\*\*\s*:.+?(?=$)/s,
-
-            // Blocs de code
-            /```[\s\S]*?```/g,
-
-            // Titres
-            /#{1,6}\s+.+$/gm,
-
-            // Tableaux
-            /\|.+\|[\s\S]*?(?=\n\s*\n|$)/g
-        ]
-
-        let remaining = content
-        let lastIndex = 0
-
-        // Détecter et extraire les patterns spéciaux
-        patterns.forEach(pattern => {
-            const regex = new RegExp(pattern)
-            let match
-
-            while ((match = regex.exec(remaining)) !== null) {
-                // Ajouter le texte avant le pattern
-                if (match.index > lastIndex) {
-                    segments.push({
-                        type: 'text',
-                        content: remaining.substring(lastIndex, match.index)
-                    })
-                }
-
-                // Ajouter le pattern comme bloc spécial
-                segments.push({
-                    type: 'special',
-                    content: match[0]
-                })
-
-                lastIndex = match.index + match[0].length
-            }
-        })
-
-        // Ajouter le reste du texte
-        if (lastIndex < remaining.length) {
-            segments.push({
-                type: 'text',
-                content: remaining.substring(lastIndex)
-            })
-        }
-
-        // Si aucun segment n'a été créé, traiter tout le contenu comme texte
-        if (segments.length === 0) {
-            segments.push({
-                type: 'text',
-                content: content
-            })
-        }
-
-        return segments
-    }
-
-    // Fonction pour ajouter un message de chargement avec design amélioré
+    // Fonction pour ajouter un message de chargement
     function addLoadingMessage() {
         const loadingDiv = document.createElement('div')
         loadingDiv.className = 'message message-bot'
@@ -228,15 +209,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const innerDiv = document.createElement('div')
         innerDiv.className = 'flex items-center'
         innerDiv.innerHTML = `
-            <div class="flex items-center space-x-2">
-                <svg class="animate-spin h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span class="text-indigo-700 font-medium">Analyse en cours</span>
-                <span class="loading-dots text-indigo-700"></span>
-            </div>
-        `
+              <div class="flex items-center space-x-2">
+                  <svg class="animate-spin h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span class="text-indigo-700 font-medium">Analyse en cours</span>
+                  <span class="loading-dots text-indigo-700"></span>
+              </div>
+          `
 
         contentDiv.appendChild(innerDiv)
 
@@ -256,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Fonction pour afficher les requêtes générées avec animation
+    // Fonction pour afficher les requêtes générées
     function displayQueries(queries) {
         queriesList.innerHTML = ''
 
@@ -277,44 +258,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 }, 50)
             }, index * 100) // Ajouter un délai pour chaque élément
         })
-
-        // Afficher le conteneur des requêtes avec animation
-        queriesContainer.style.display = 'block'
-        queriesContainer.style.opacity = '0'
-        queriesContainer.style.transform = 'translateY(-10px)'
-
-        setTimeout(() => {
-            queriesContainer.style.transition = 'all 0.3s ease'
-            queriesContainer.style.opacity = '1'
-            queriesContainer.style.transform = 'translateY(0)'
-            toggleQueries.innerHTML = '<i class="fas fa-search-minus"></i>'
-        }, 50)
     }
 
     // Gestion du toggle pour les requêtes avec animation
     toggleQueries.addEventListener('click', function () {
         if (queriesContainer.style.display === 'none' || queriesContainer.style.display === '' || queriesContainer.style.opacity === '0') {
-            queriesContainer.style.display = 'block'
-
-            // Animation d'ouverture
+            queriesContainer.style.display = 'block';
             setTimeout(() => {
-                queriesContainer.style.opacity = '1'
-                queriesContainer.style.transform = 'translateY(0)'
-                toggleQueries.innerHTML = '<i class="fas fa-search-minus"></i>'
-            }, 50)
+                queriesContainer.style.opacity = '1';
+                queriesContainer.style.transform = 'translateY(0)';
+            }, 50);
         } else {
-            // Animation de fermeture
-            queriesContainer.style.opacity = '0'
-            queriesContainer.style.transform = 'translateY(-10px)'
-
+            queriesContainer.style.opacity = '0';
+            queriesContainer.style.transform = 'translateY(-10px)';
             setTimeout(() => {
-                queriesContainer.style.display = 'none'
-                toggleQueries.innerHTML = '<i class="fas fa-search"></i>'
-            }, 300)
+                queriesContainer.style.display = 'none';
+            }, 300);
         }
-    })
+    });
 
-    // Fonction pour afficher les documents récupérés avec animation
+    // Fonction pour afficher les documents récupérés
     function displayDocuments(documents) {
         documentsList.innerHTML = ''
 
@@ -350,18 +313,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 }, 50)
             }, index * 150) // Ajouter un délai pour chaque élément
         })
-
-        // Afficher le conteneur des documents avec animation
-        documentsContainer.style.display = 'block'
-        documentsContainer.style.opacity = '0'
-        documentsContainer.style.transform = 'translateY(-10px)'
-
-        setTimeout(() => {
-            documentsContainer.style.transition = 'all 0.3s ease'
-            documentsContainer.style.opacity = '1'
-            documentsContainer.style.transform = 'translateY(0)'
-            toggleDocuments.innerHTML = '<i class="fas fa-folder-open"></i>'
-        }, 50)
     }
 
     // Formatage du contenu du document
@@ -389,22 +340,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // HTML pour le document formaté
             return `
-                <div class="document-header flex items-center justify-between mb-2">
+                  <div class="document-header flex items-center justify-between mb-2">
                     <h3 class="font-medium text-blue-800">${title}</h3>
-                    <span class="text-xs text-gray-500">${url ? `<a href="${url}" target="_blank" class="text-blue-600 hover:underline flex items-center"><i class="fas fa-external-link-alt mr-1"></i>Source</a>` : ''}</span>
-                </div>
-                <div class="document-content text-xs text-gray-700 border-t border-blue-100 pt-2">
-                    ${docContent.length > 150 ? docContent.substring(0, 150) + '...' : docContent}
-                </div>
-                <button class="view-more-btn text-xs text-blue-600 mt-2 hover:underline flex items-center">
-                    <i class="fas fa-eye mr-1"></i> Voir détails
-                </button>
-                <div class="document-full-content hidden bg-blue-50 mt-2 p-2 rounded border border-blue-100 text-xs">
-                    <div class="mb-2"><strong>Contenu complet:</strong></div>
-                    ${docContent.replace(/\n/g, '<br>')}
-                    ${metadata ? `<div class="mt-2 pt-2 border-t border-blue-200"><strong>Métadonnées:</strong><br>${metadata.replace(/\n/g, '<br>')}</div>` : ''}
-                </div>
-            `
+                    <span class="text-xs text-gray-500">${url ? `<a href="${url}" target="_blank" class="text-blue-600 hover:underline flex items-center" title="${url}"><i class="fas fa-external-link-alt mr-1"></i>Source</a>` : ''}</span>
+                  </div>
+                  <div class="document-content text-xs text-gray-700 border-t border-blue-100 pt-2">
+                      ${docContent.length > 150 ? docContent.substring(0, 150) + '...' : docContent}
+                  </div>
+                  <button class="view-more-btn text-xs text-blue-600 mt-2 hover:underline flex items-center">
+                      <i class="fas fa-eye mr-1"></i> Voir détails
+                  </button>
+                  <div class="document-full-content hidden bg-blue-50 mt-2 p-2 rounded border border-blue-100 text-xs">
+                      <div class="mb-2"><strong>Contenu complet:</strong></div>
+                      ${docContent.replace(/\n/g, '<br>')}
+                      ${metadata ? `<div class="mt-2 pt-2 border-t border-blue-200"><strong>Métadonnées:</strong><br>${metadata.replace(/\n/g, '<br>')}</div>` : ''}
+                  </div>
+              `
         } else {
             return `<div class="text-gray-700">${docContent}</div>`
         }
@@ -413,25 +364,21 @@ document.addEventListener('DOMContentLoaded', function () {
     // Gestion du toggle pour les documents
     toggleDocuments.addEventListener('click', function () {
         if (documentsContainer.style.display === 'none' || documentsContainer.style.display === '' || documentsContainer.style.opacity === '0') {
-            documentsContainer.style.display = 'block'
-
-            // Animation d'ouverture
+            documentsContainer.style.display = 'block';
             setTimeout(() => {
-                documentsContainer.style.opacity = '1'
-                documentsContainer.style.transform = 'translateY(0)'
-                toggleDocuments.innerHTML = '<i class="fas fa-folder-open"></i>'
-            }, 50)
+                documentsContainer.style.opacity = '1';
+                documentsContainer.style.transform = 'translateY(0)';
+                toggleDocuments.innerHTML = '<i class="fas fa-folder-open"></i>';
+            }, 50);
         } else {
-            // Animation de fermeture
-            documentsContainer.style.opacity = '0'
-            documentsContainer.style.transform = 'translateY(-10px)'
-
+            documentsContainer.style.opacity = '0';
+            documentsContainer.style.transform = 'translateY(-10px)';
             setTimeout(() => {
-                documentsContainer.style.display = 'none'
-                toggleDocuments.innerHTML = '<i class="fas fa-folder-closed"></i>'
-            }, 300)
+                documentsContainer.style.display = 'none';
+                toggleDocuments.innerHTML = '<i class="fas fa-folder-closed"></i>';
+            }, 300);
         }
-    })
+    });
 
     // Délégation d'événements pour les boutons "Voir détails"
     documentsList.addEventListener('click', function (e) {
@@ -552,4 +499,4 @@ document.addEventListener('DOMContentLoaded', function () {
 
     documentsContainer.style.display = 'none'
     toggleDocuments.innerHTML = '<i class="fas fa-folder-closed"></i>'
-})
+});
