@@ -1,161 +1,138 @@
-# Chatbot RAG Support Technique
+# Chatbot RAG — Support technique
 
-Un système de question-réponse intelligent basé sur l'architecture RAG (Retrieval-Augmented Generation) pour le support technique, exploitant des guides techniques et des discussions Reddit.
+Ce dépôt rassemble le prototype que j’ai réalisé dans le cadre de mon mémoire de bachelor à la HEG Genève (2025). L’objectif est de démontrer qu’une approche **Retrieval‑Augmented Generation** (RAG) permet déjà de répondre aux questions d’un service d’assistance en combinant deux ressources ouvertes : d’un côté les guides iFixit, de l’autre les discussions du subreddit `r/techsupport`. Le modèle de langage reste généraliste ; toute la valeur provient du contexte précis qu’on lui fournit.
 
 ```
 ┌─────────────────────────────────────┐
-│         INTERFACE WEB               │
-│    (Flask + HTML/CSS + Tailwind)    │
-└────────────────────┬────────────────┘
-                     │
-                     ▼
+│        INTERFACE WEB (Flask)        │
+└───────────────┬─────────────────────┘
+                │
+                ▼
 ┌─────────────────────────────────────┐
-│          MOTEUR RAG                 │
-│  (LangChain + GPT-4.1 + Prompts)    │
-└────────────────────┬────────────────┘
-                     │
-                     ▼
+│   MOTEUR RAG (LangChain + GPT‑4.1)  │
+└───────────────┬─────────────────────┘
+                │
+                ▼
 ┌─────────────────────────────────────┐
-│     SYSTÈME DE RÉCUPÉRATION         │
-│  (FAISS + HuggingFace Embeddings)   │
-└────────────────────┬────────────────┘
-                     │
-                    ┌┴┐
-                    │ │
-                    ▼ ▲
-┌─────────────────────────────────────┐
-│        SOURCES DE DONNÉES           │
-│    (API Reddit PRAW + API iFixit)   │
-└─────────────────────────────────────┘
+│ RETRIEVER (FAISS + Embeddings HF)   │
+└───────────────┬─────────────────────┘
+                │
+               ▼ ▲
+        Données JSON (Reddit, iFixit)
 ```
 
-## ✨ Caractéristiques
+## Caractéristiques
 
-- ✅ **Interface intuitive** - Chat moderne avec animations et formatting Markdown
-- 🔍 **Recherche intelligente** - Génération de requêtes alternatives pour une meilleure récupération
-- 🧠 **Contexte enrichi** - Utilisation de posts Reddit et guides techniques avec récupération API dynamique
-- 📊 **Transparence** - Visualisation des documents et requêtes utilisés pour chaque réponse
-- 🚀 **Performance** - Optimisé avec CUDA pour les embeddings et FAISS pour la recherche vectorielle
+- Interface minimaliste avec rendu Markdown.
+- Reformulation automatique de la question pour élargir la recherche.
+- Ajout, le cas échéant, des étapes complètes d’un guide iFixit dans le contexte.
+- Affichage des sources mobilisées et du temps de traitement pour chaque réponse.
+- Recherche vectorielle accélérée par FAISS, avec prise en charge de CUDA si disponible.
 
-## 📋 Prérequis
+## Prérequis
 
-- Python 3.x
-- Clé API OpenAI
-- CUDA recommandé (mais non obligatoire)
-- Fichiers sources JSON dans `./data/`
+- Python 3.x installé ;
+- clé API OpenAI à placer dans `.env` ;
+- GPU compatible CUDA (facultatif) pour accélérer les embeddings ;
+- fichiers JSON copiés dans `data/`.
 
-## 🚀 Installation
+## Installation
 
-1. Cloner le dépôt
-```bash
-git clone https://github.com/CoCoRoRooo/TB
-```
+1. Cloner le dépôt :
+   ```bash
+   git clone https://github.com/CoCoRoRooo/TB
+   cd TB
+   ```
+2. Activer l'environnement virtuel :
+   ```bash
+   .\venv\Scripts\activate
+   ```
+3. Installer les dépendances :
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Renseigner la clé OpenAI :
+   ```bash
+   echo OPENAI_KEY="votre_cle_api" > .env
+   ```
+5. Démarrer le serveur :
+   ```bash
+   python app.py
+   ```
+6. Ouvrir <http://localhost:5000> dans votre navigateur.
 
-2. Créer et activer un environnement virtuel
-```bash
-# Sur Windows
-.\venv\Scripts\activate
-```
-
-3. Installer les dépendances
-```bash
-pip install -r requirements.txt
-```
-
-4. Configurer la clé API
-```bash
-echo "OPENAI_KEY=votre_cle_api" > .env
-```
-
-5. Lancer l'application
-```bash
-python app.py
-```
-
-6. Ouvrir votre navigateur à l'adresse
-```
-http://localhost:5000
-```
-
-## 🧩 Architecture
-
-Le système est composé de plusieurs modules interconnectés:
+## Architecture
 
 ### Backend
-- `app.py` - Application Flask principale et API REST
-- `rag_chain.py` - Configuration des chaînes LangChain pour le RAG
-- `retriever.py` - Gestion de l'indexation et de la recherche vectorielle
-- `api_client.py` - Client pour l'API iFixit (récupération des étapes des guides)
-- `utils.py` - Fonctions utilitaires diverses
+
+- `app.py` : lance Flask et expose les routes API ;
+- `rag_chain.py` : configure la chaîne LangChain ;
+- `retriever.py` : gère l’index FAISS et la recherche ;
+- `api_client.py` : interroge l’API iFixit pour récupérer les étapes ;
+- `utils.py` : petites fonctions d’appoint.
 
 ### Frontend
-- `templates/index.html` - Structure HTML de l'interface
-- `static/css/style.css` - Styles CSS personnalisés
-- `static/js/main.js` - Logique JavaScript pour les interactions utilisateur
 
-### Scripts de collecte de données
-- `get_posts.py` - Récupération des posts Reddit du subreddit "techsupport"
-- `guides.py` - Récupération des guides techniques depuis l'API iFixit
+- `templates/index.html` : structure HTML de l’interface ;
+- `static/css/style.css` : styles Tailwind ;
+- `static/js/main.js` : interactions côté client.
 
-## 💬 Utilisation
+### Scripts de collecte
 
-1. Saisissez votre question technique dans la zone de texte en bas de l'interface
-2. Le système va:
-   - Générer plusieurs reformulations de votre question pour améliorer la recherche
-   - Récupérer les documents pertinents (posts Reddit et guides techniques)
-   - Enrichir les guides avec leurs étapes détaillées via l'API
-   - Générer une réponse structurée en se basant sur le contexte récupéré
-3. Consultez les sections dépliables pour explorer:
-   - Les requêtes alternatives générées
-   - Les documents récupérés avec leurs métadonnées
-   - Le temps de traitement pour la transparence
+- `scripts/get_posts.py` : télécharge les discussions Reddit ;
+- `scripts/guides.py` : récupère les guides iFixit.
 
-## 🔧 Technologies utilisées
+## Utilisation
 
-- **Flask** - Serveur web et API REST
-- **LangChain** - Orchestration des flux RAG
-- **FAISS** - Indexation et recherche vectorielle efficace
-- **Hugging Face** - Modèle d'embeddings `sentence-transformers/all-MiniLM-L6-v2`
-- **OpenAI GPT-4.1** - Génération de requêtes et de réponses
-- **Tailwind CSS** - Framework CSS pour l'interface utilisateur
-- **PRAW** - API Reddit pour la collecte de données
+1. Saisir une question dans le champ prévu.
+2. Le backend en propose plusieurs reformulations, puis interroge l’index.
+3. Les passages pertinents — et éventuellement les étapes iFixit — sont ajoutés au contexte.
+4. GPT‑4.1 génère la réponse structurée.
+5. Les requêtes, les documents et le temps de traitement restent consultables via des volets repliables.
 
-## 📝 Format des réponses
+## Technologies utilisées
 
-Les réponses générées suivent une structure claire:
+- Flask pour le serveur et l’API ;
+- LangChain pour orchestrer le RAG ;
+- FAISS pour l’indexation vectorielle ;
+- embeddings `all‑MiniLM‑L6‑v2` (Hugging Face) ;
+- GPT‑4.1 côté OpenAI pour la génération ;
+- Tailwind CSS pour le style ;
+- `PRAW` pour accéder à l’API Reddit.
 
-- **🔍 Analyse du problème** - Synthèse et compréhension de la question
-- **✅ Vérifications préalables** - Étapes de diagnostic recommandées
-- **📝 Procédure détaillée** - Instructions étape par étape pour résoudre le problème
-- **💡 Conseils supplémentaires** - Recommandations additionnelles et bonnes pratiques
-- **🔗 Sources consultées** - Références aux documents utilisés pour générer la réponse
+## Format des réponses
 
-## 🛠️ Personnalisation
+- Analyse du problème ;
+- vérifications préalables ;
+- procédure détaillée ;
+- conseils complémentaires ;
+- sources citées.
+
+## Personnalisation
 
 ### Modèles
-- Pour changer le modèle d'embeddings, modifiez le paramètre `model_name` dans `retriever.py`
-- Pour changer le modèle LLM, modifiez la configuration dans `rag_chain.py`
 
-### Sources de données
-- Ajoutez de nouvelles sources en modifiant les fonctions de chargement dans `retriever.py`
-- Adaptez le format des documents dans la fonction `index_data_embeddings()`
+- Modifier `model_name` dans `retriever.py` pour changer d’embeddings.
+- Adapter `rag_chain.py` pour utiliser un autre LLM.
 
-### Interface utilisateur
-- Personnalisez le design en modifiant `templates/index.html` et `static/css/style.css`
-- Ajoutez de nouvelles fonctionnalités en étendant `static/js/main.js`
+### Données
 
-## 📊 Performance et optimisation
+- Ajouter un loader, puis relancer `index_data_embeddings()` pour réindexer.
 
-- Utilisation de CUDA pour accélérer les calculs d'embeddings si disponible
-- Optimisation du retriever avec des paramètres ajustables:
-  - `chunk_size` et `chunk_overlap` pour le découpage des documents
-  - `search_type` et `search_kwargs` pour la configuration de la recherche
-- Affichage du temps de traitement pour chaque requête
+### Interface
 
-## 🙏 Remerciements
+- Mettre à jour `style.css` ou `index.html` pour le design.
+- Étendre la logique dans `main.js` si nécessaire.
 
-- [iFixit](https://www.ifixit.com) pour leur API publique de guides techniques
-- [Reddit](https://www.reddit.com) et la communauté r/techsupport pour les discussions techniques
-- [LangChain](https://github.com/langchain-ai/langchain) pour le framework RAG
-- [HuggingFace](https://huggingface.co) pour les modèles d'embeddings
-- [OpenAI](https://openai.com) pour les modèles de langage
+## Performance et optimisation
+
+- CUDA accélère les embeddings quand il est présent.
+- Les paramètres `chunk_size` et `chunk_overlap` se règlent dans `retriever.py`.
+- Le temps de traitement s’affiche après chaque requête.
+
+## Remerciements
+
+- iFixit pour son API ouverte ;
+- Reddit et la communauté `r/techsupport` pour leur contenu ;
+- les équipes LangChain et FAISS pour leurs bibliothèques ;
+- OpenAI et Hugging Face pour leurs modèles et API.

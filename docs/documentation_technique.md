@@ -24,20 +24,51 @@
 
 ## Vue d'ensemble
 
-Ce chatbot est un système de question-réponse basé sur l'architecture RAG (Retrieval-Augmented Generation). Il utilise une combinaison de guides techniques et de discussions Reddit pour fournir des réponses détaillées et contextuelles aux questions des utilisateurs concernant le support technique.
+Pour mon travail de bachelor, j’ai mis au point un chatbot de support technique basé sur l’architecture Retrieval-Augmented Generation (RAG). Pour le contenu, j’ai associé des guides techniques détaillés à des discussions issues de Reddit, afin de proposer des réponses à la fois précises et contextuelles.
 
-Le système exploite LangChain pour orchestrer le flux de traitement, FAISS pour l'indexation vectorielle, Hugging Face pour les embeddings, et OpenAI GPT-4.1 pour la génération de réponses. L'application est servie via Flask et offre une API REST pour interagir avec le système, avec une interface utilisateur moderne en HTML/CSS.
+Sur le plan technique, j’ai utilisé LangChain pour piloter le pipeline et j’ai converti les documents en vecteurs via les embeddings Hugging Face, avant que FAISS n’indexe ces représentations pour extraire les passages pertinents. Enfin, GPT-4.1 génère la réponse finale, et l’application, déployée sous Flask, expose une API REST et une interface web en HTML/CSS.
 
 ## Architecture du système
 
-Le système est composé de plusieurs modules interconnectés:
+J’ai préféré découper le chatbot en six blocs bien séparés. Cette approche me permet de localiser rapidement un bug ou de faire évoluer une partie du code sans démonter tout le reste.
 
-1. **Interface web** (`app.py` + templates/static): Fournit une interface utilisateur et expose une API REST.
-2. **Moteur RAG** (`rag_chain.py`): Orchestre les requêtes, la récupération et la génération.  
-3. **Système de récupération** (`retriever.py`): Gère l'indexation et la recherche dans la base de connaissances.
-4. **Client API** (`api_client.py`): Récupère des données externes (étapes de guides iFixit).
-5. **Utilitaires** (`utils.py`): Fonctions d'aide pour le formattage et la manipulation des données.
-6. **Interface frontend** (`templates/index.html` + `static/css/style.css`): Présentation visuelle et interactions utilisateur.
+1. **Interface web (`app.py` + `templates/static`)**
+   - Dans `app.py`, j’initialise Flask, je déclare les routes et je traite les requêtes HTTP.
+   - Les dossiers `templates` et `static` concentrent tout ce qui est visuel : pages HTML, feuilles de style et scripts.
+   - En bref, c’est la porte d’entrée du chatbot, tant pour l’utilisateur que pour les appels REST.
+
+2. **Moteur RAG (`rag_chain.py`)**
+   - Dès qu’une question arrive, je la reformule en plusieurs variantes pour multiplier les angles de recherche.
+   - Ces formulations partent ensuite vers le retriever ; les passages retenus sont transmis à GPT‑4.1 pour générer la réponse.
+   - On peut voir ce fichier comme le chef d’orchestre de tout le pipeline.
+
+3. **Système de récupération (`retriever.py`)**
+   - Chaque document est d’abord transformé en vecteur grâce aux embeddings Hugging Face.
+   - FAISS gère ensuite l’indexation et renvoie les segments les plus proches sur le plan sémantique.
+   - Ce module fait le lien entre la base de connaissances et la question posée.
+
+4. **Client API (`api_client.py`)**
+   - Pour compléter le corpus interne, je récupère des données auprès de services externes (notamment iFixit pour récupérer les étapes d'un guide).
+   - Les réponses JSON sont nettoyées, mises au bon format puis ajoutées à l’index.
+   - L’idée est d’éviter une base figée et d’intégrer des contenus régulièrement mis à jour.
+
+5. **Utilitaires (`utils.py`)**
+   - Je centralise ici tout ce qui sert un peu partout : nettoyage de texte, conversions, logs, etc.
+   - C’est un gain de temps et - surtout - ça m’évite de répéter le même code.
+
+6. **Interface frontend (`templates/index.html` + `static/css/style.css`)**
+   - `index.html` contient un champ de saisie, un bouton « Envoyer » et une zone de réponse.
+   - `style.css` assure une mise en page sobre : couleurs neutres, typographie lisible, espacements aérés.
+
+**Comment tout s’enchaîne ?**
+
+1. L’utilisateur pose sa question.
+2. Le moteur RAG crée des variantes et lance la recherche.
+3. Le retriever interroge FAISS et récupère les extraits pertinents.
+4. Ces extraits sont passés à GPT‑4.1, qui rédige la réponse.
+5. La réponse revient par l’API REST et s’affiche sans délai dans l’interface.
+
+Cette séparation des rôles me permet de tester ou de remplacer un module (changer d’indexeur, par exemple) sans perturber l’ensemble du système.
 
 ![Architecture du système](../assets/architecture_diagram.svg)
 
@@ -92,12 +123,14 @@ def chat():
         "processing_time": f"{elapsed_time:.2f} secondes",
     })
 ```
-Endpoint principal pour le traitement des questions utilisateur:
-- Accepte une question au format JSON
-- Génère des requêtes alternatives pour améliorer la récupération
-- Récupère les documents pertinents
-- Génère une réponse détaillée avec le LLM
-- Renvoie la réponse, les requêtes générées, les documents utilisés et le temps de traitement
+
+###### Endpoint principal
+Ce point d’accès assure le traitement complet d’une requête utilisateur :
+- Accepte la question envoyée en JSON ;
+- Génère des requêtes alternatives pour améliorer la récupération ;
+- Récupère les documents pertinents dans l’index FAISS ;
+- Produit une réponse détaillée à l’aide de GPT‑4.1 ;
+- Renvoie à l'utilisateur la réponse, les requêtes générées, les documents utilisés et le temps de traitement global.
 
 #### Initialisation:
 
@@ -163,12 +196,12 @@ def initialize_rag_system():
         | StrOutputParser()
     )
 ```
-Cette fonction essentielle initialise tout le système RAG:
-- Charge les données d'entrée (posts Reddit et guides)
-- Configure le retriever avec les embeddings
-- Définit les prompts pour le LLM
-- Configure les chaînes de traitement pour la génération de requêtes alternatives
-- Configure la chaîne RAG principale
+Avant de pouvoir répondre à la moindre question, j’exécute une fonction d’initialisation qui met en place l’ensemble du pipeline :
+- Importe les sources brutes (guides techniques et posts Reddit) ;
+- Paramètre le retriever en calculant les embeddings et en alimentant l’index FAISS ;
+- Établit les prompts de base destinés au LLM ;
+- Met en place la chaîne de reformulation chargée de créer des requêtes alternatives ;
+- Assemble la chaîne RAG principale, qui relie la recherche documentaire à la génération de réponses.
 
 #### Prompts système:
 
@@ -236,9 +269,9 @@ Aucune inférence ou ajout personnel n'est autorisé. Si la réponse n'est pas d
 ```
 
 #### Configuration du LLM et contraintes d'information
-   - Le modèle LLM (gpt-4.1) est configuré avec une température de 0.0 pour garantir des réponses déterministes et cohérentes.
-   - Le prompt final est spécifiquement conçu pour forcer le LLM à utiliser uniquement les informations provenant des documents récupérés via le retriever, avec des instructions explicites de ne pas utiliser de connaissances externes.
-   - Le système intègre une fonction de débogage (debug_context) qui affiche le contenu du contexte avant traitement par le LLM, permettant de vérifier les documents utilisés pour la génération.
+- J’exécute GPT‑4.1 avec une température réglée à 0 ,0, ce qui garantit des réponses déterministes et donc comparables d’un appel à l’autre.
+- Le prompt final rappelle explicitement au modèle qu’il doit s’appuyer uniquement sur les passages remontés par le retriever ; toute connaissance externe est proscrite pour préserver la traçabilité des sources.
+- Pour vérifier que cette règle est bien respectée, j’active la fonction debug_context, qui affiche dans les journaux le contexte envoyé au LLM ; je peux ainsi contrôler en un clin d’œil quels documents ont servi à la génération.
 
 ### retriever.py
 
@@ -297,12 +330,12 @@ def index_data_embeddings(posts, guides, model_name="sentence-transformers/all-M
         search_kwargs={"k": 2, "score_threshold": 0.3},
     )
 ```
-Cette fonction cruciale:
-- Transforme les données brutes en documents LangChain
-- Découpe les documents en chunks pour une meilleure recherche
-- Crée les embeddings avec le modèle Hugging Face spécifié
-- Indexe les embeddings dans une base FAISS
-- Configure et retourne un retriever optimisé
+Avant d’interroger la base, je dois d’abord transformer les sources brutes pour qu’elles soient digestes pour le système :
+- Conversion en objets Document : je verse chaque guide ou message Reddit dans la classe Document de LangChain, ce qui homogénéise contenu et métadonnées.
+- Découpage en morceaux : pour conserver une recherche fine, je scinde ensuite chaque texte en blocs d’environ `N` tokens ; un passage trop long finirait par diluer l’information utile.
+- Création des embeddings : ces blocs passent dans le modèle Hugging Face choisi afin d’obtenir leurs vecteurs d’embeddings, indispensables pour la comparaison sémantique.
+- Indexation dans FAISS : j’insère ensuite les vecteurs dans un index FAISS, qui se chargera de retrouver les blocs les plus proches lorsqu’une question sera posée.
+- Renvoi du retriever : pour terminer, je renvoie un objet retriever déjà connecté à cet index, prêt à être utilisé dans le reste du pipeline.
 
 ### api_client.py
 
@@ -479,28 +512,30 @@ Ce fichier définit l'interface utilisateur principale de l'application, présen
 
 #### Caractéristiques principales:
 
-1. **Interface à deux panneaux:**
-   - Panneau latéral (sidebar) contenant les métriques et données RAG
-   - Panneau principal contenant l'interface de chat
-2. **Sidebar informative:**
-   - Indicateur de temps de traitement
-   - Panneaux pliables pour les requêtes alternatives générées
-   - Visualisation des documents récupérés avec leurs métadonnées
-3. **Interface de chat moderne:**
-   - En-tête avec indicateur de statut
-   - Zone de messages avec support pour le Markdown
-   - Barre de saisie fixe en bas pour une expérience utilisateur fluide
-4. **Éléments interactifs:**
-   - Bouton pour basculer l'affichage de la sidebar
-   - Boutons de toggle pour les sections de requêtes et documents
-   - Visualisation structurée des documents sources
-5. **Dépendances externes:**
-   - Font Awesome pour les icônes
-   - Tailwind CSS pour les styles responsive
-   - Marked.js pour le rendu du Markdown
-   - DOMPurify pour la sécurité du contenu HTML
-  
-Cette interface est conçue pour mettre en évidence à la fois l'expérience conversationnelle et la transparence du système RAG, permettant aux utilisateurs de consulter les sources et le processus de génération des réponses.
+Pour rendre le chatbot à la fois lisible et transparent quant à son fonctionnement interne, j’ai opté pour une interface organisée en deux volets :
+
+1. **Double panneau**
+   - Un panneau latéral (sidebar) affiche les métriques et les données propres au RAG.
+   - Le panneau principal héberge la zone de conversation.
+   - Cette disposition permet de suivre le dialogue tout en gardant un œil sur le « backstage » du système.
+2. **Sidebar informative**
+   - Indicateur du temps de traitement de la requête.
+   - Sections repliables détaillant les requêtes alternatives générées.
+   - Affichage des documents récupérés, accompagnés de leurs contenus et métadonnées.
+3. **Zone de chat moderne**
+   - Fil de messages avec rendu Markdown pour un affichage propre des listes, liens ou extraits de code.
+   - Barre de saisie fixée en bas de l’écran pour éviter le défilement intempestif.
+4. **Éléments interactifs**
+   - Bouton pour masquer ou afficher la sidebar.
+   - Toggles permettant d’ouvrir ou de fermer les sections « Requêtes » et « Documents »
+   - Tableau structuré listant les sources utilisées, afin de favoriser la traçabilité.
+5. **Dépendances externes**
+   - Font Awesome pour les icônes.
+   - Tailwind CSS pour un style responsive sans alourdir le code.
+   - Marked.js pour interpréter le Markdown dans les messages.
+   - DOMPurify pour sécuriser le rendu HTML et éviter toute injection malveillante.
+
+Cette organisation vise à concilier une expérience de chat fluide et l’exigence de transparence : à tout moment, l’utilisateur peut vérifier d’où vient l’information et comment la réponse a été élaborée.
 
 ### static/css/style.css
 
@@ -518,7 +553,7 @@ body {
     overflow: hidden;
 }
 ```
-Ces styles fondamentaux définissent la typographie principale (Poppins) et la couleur de texte de l'application. La propriété `height: 100vh` assure que l'application occupe toute la hauteur de l'écran, tandis que `overflow: hidden` empêche le défilement au niveau de la page, garantissant une interface de type application plutôt qu'un site web traditionnel avec défilement.
+Ces styles de base fixent la police principale (Poppins) et la couleur du texte de l'application. Avec la propriété `height: 100vh`, l'application remplit toute la hauteur de l'écran. Le `overflow: hidden` évite le défilement, ce qui donne une expérience plus proche d’une application que d’un site web classique.
 
 2. **Animations:**
 ```css
@@ -546,7 +581,7 @@ Ces styles fondamentaux définissent la typographie principale (Poppins) et la c
     100% { box-shadow: 0 0 0 0 rgba(72, 187, 120, 0); }
 }
 ```
-Cette section définit deux animations essentielles pour l'interface : un effet de points de chargement (loading-dots) qui simule visuellement l'activité du chatbot lors du traitement, et une animation de pulsation (pulse) créant un effet de "battement" sur certains éléments pour attirer l'attention de l'utilisateur. Ces animations améliorent le retour visuel et donnent une impression de système vivant et réactif.
+Cette partie parle de deux animations principales pour l'interface. D'abord, il y a un effet de chargement qui montre que le chatbot est en train de faire quelque chose. Ensuite, il y a une animation de pulsation qui fait vibrer certains éléments pour capter l'attention de l'utilisateur. Ces animations ajoutent un peu de dynamisme à l'interface et aident à comprendre ce qui se passe.
 
 3. **Layout et structure de l'application:**
 ```css
@@ -572,7 +607,7 @@ Cette section définit deux animations essentielles pour l'interface : un effet 
     flex-direction: column;
 }
 ```
-Cette section établit la structure principale de l'application en utilisant Flexbox. Le conteneur app-container divise l'interface en deux zones principales : une sidebar de largeur fixe (280px) et une zone de contenu principal qui s'étend pour occuper l'espace restant. La sidebar peut défiler verticalement si son contenu dépasse la hauteur de l'écran, tandis qu'une transition fluide est définie pour son animation de fermeture/ouverture.
+Dans cette section, on va discuter de l'organisation de l'application avec `Flexbox`. Le conteneur principal, qu'on appelle `app-container`, est divisé en deux parties : une sidebar qui fait 280px de large et une zone de contenu qui remplit le reste de l'espace. Si le contenu de la sidebar dépasse, on peut la faire défiler, et elle s'ouvre et se ferme avec une animation fluide.
 
 4. **Gestion de la sidebar:**
 ```css
@@ -598,7 +633,7 @@ Cette section établit la structure principale de l'application en utilisant Fle
     left: 0;
 }
 ```
-Ces styles gèrent le comportement de la sidebar, notamment sa capacité à se réduire et s'étendre. Le bouton toggle-sidebar est stylisé pour s'intégrer harmonieusement à l'en-tête, avec un effet de survol subtil. Lorsque la classe sidebar-collapsed est appliquée à l'élément parent, la sidebar se déplace hors de l'écran grâce à une marge négative, et la zone de saisie du chat s'ajuste automatiquement pour occuper toute la largeur disponible, optimisant ainsi l'espace d'affichage.
+Ces styles gèrent le comportement de la sidebar, notamment sa capacité à se réduire et s'étendre. Le bouton `toggle-sidebar` est stylisé pour s'intégrer harmonieusement à l'en-tête, avec un effet de survol subtil. Lorsque la classe `sidebar-collapsed` est appliquée à l'élément parent, la sidebar se déplace hors de l'écran grâce à une marge négative, et la zone de saisie du chat s'ajuste automatiquement pour occuper toute la largeur disponible, optimisant ainsi l'espace d'affichage.
 
 5. **Interface de chat:**
 ```css
@@ -640,7 +675,7 @@ Ces styles gèrent le comportement de la sidebar, notamment sa capacité à se r
     transition: all 0.3s ease;
 }
 ```
-Cette section définit l'apparence et le comportement de l'interface de chat principale. L'en-tête utilise un dégradé élégant de couleurs indigo/bleu pour un effet visuel attrayant. La zone de messages est configurée pour défiler automatiquement, avec des barres de défilement stylisées et discrètes. Un espace supplémentaire est ajouté en bas (padding-bottom: 80px) pour éviter que les derniers messages ne soient masqués par la zone de saisie. La zone de saisie est fixée en bas de l'écran avec un effet d'ombre subtil, garantissant qu'elle reste toujours accessible pendant le défilement de la conversation.
+Cette partie parle de l'apparence et du fonctionnement de l'interface de chat. L'en-tête utilise un dégradé de couleurs indigo/bleu pour un effet visuel attrayant. La zone de messages est configurée pour défiler automatiquement, avec des barres de défilement stylisées et discrètes. Un espace supplémentaire est ajouté en bas (`padding-bottom: 80px`) pour éviter que les derniers messages ne soient masqués par la zone de saisie. La zone de saisie est fixée en bas de l'écran avec un effet d'ombre subtil, garantissant qu'elle reste toujours accessible pendant le défilement de la conversation.
 
 6. **Styles des messages:**
 ```css
@@ -706,7 +741,7 @@ Cette section définit l'apparence et le comportement de l'interface de chat pri
     border-top: 1px solid rgba(16, 185, 129, 0.1);
 }
 ```
-Cette section détaille la présentation des messages dans la conversation. Chaque message apparaît avec une animation d'entrée fluide (fadeIn) pour une expérience plus dynamique. Les avatars utilisent des dégradés distincts pour différencier visuellement l'utilisateur (vert) du bot (indigo/bleu). Les messages de l'utilisateur sont alignés à droite avec une structure inversée (flex-direction: row-reverse) et un fond légèrement teinté, tandis que les messages du bot sont alignés à gauche avec un fond blanc. Des détails subtils comme les rayons de bordure asymétriques et les ombres légères ajoutent de la profondeur et de l'élégance à l'interface.
+Cette section parle de l'apparence et du fonctionnement de l'interface de chat. L'en-tête a un joli dégradé de couleurs indigo et bleu qui attire l'œil. La zone des messages fait défiler automatiquement les nouvelles entrées, avec des barres de défilement discrètes. On explique aussi comment les messages sont présentés dans la conversation. Chaque message entre avec une animation fluide, ce qui rend les échanges plus dynamiques. Les avatars sont colorés différemment : l'utilisateur en vert et le bot en indigo/bleu. Les messages de l'utilisateur sont à droite avec un fond légèrement coloré, tandis que ceux du bot sont à gauche avec un fond blanc. Des petits détails comme des bords asymétriques et des ombres légères ajoutent un peu de style à l'interface.
 
 7. **Affichage des requêtes et documents:**
 ```css
@@ -738,7 +773,7 @@ Cette section détaille la présentation des messages dans la conversation. Chaq
     max-width: 100%;
 }
 ```
-Ces styles configurent les panneaux pliables dans la sidebar qui affichent les requêtes alternatives et les documents sources. Par défaut, ces panneaux sont masqués (display: none) et s'affichent avec une transition fluide lorsqu'ils sont activés. Une hauteur maximale et un défilement vertical sont définis pour contenir efficacement de grandes quantités d'informations sans perturber la mise en page. Diverses propriétés de gestion du texte (word-wrap, word-break, hyphens) garantissent que les longs mots et URLs ne débordent pas des conteneurs, assurant ainsi une présentation soignée des documents et requêtes.
+Ces styles gèrent les panneaux pliables dans la barre latérale, affichant des requêtes alternatives et des documents source. Par défaut, ces panneaux sont cachés et apparaissent avec une transition fluide quand on les active. On fixe une hauteur maximale et un défilement vertical pour bien contenir beaucoup d'informations sans déranger la mise en page. Diverses options de gestion du texte s'assurent que les mots longs et les URLs restent dans les conteneurs, ce qui aide à garder une présentation claire des documents et requêtes.
 
 8. **Rendu du Markdown:**
 ```css
@@ -768,7 +803,7 @@ Ces styles configurent les panneaux pliables dans la sidebar qui affichent les r
     border: 1px solid #e2e8f0;
 }
 ```
-Cette section définit le formatage des éléments Markdown dans les réponses du chatbot. Les titres sont stylisés avec des tailles et des poids spécifiques pour une hiérarchie visuelle claire. Les blocs de code utilisent une police monospace distinctive avec un fond gris clair et une bordure subtile, rendant le code facilement identifiable. La couleur indigo du texte de code maintient la cohérence avec le thème de couleur global de l'application. Ces styles permettent aux réponses complexes contenant du texte formaté d'être présentées de manière claire et professionnelle.
+Cette section explique comment le formatage Markdown est utilisé dans les réponses du chatbot. Les titres ont des tailles et des poids différents pour que ce soit plus facile à lire. Les blocs de code sont en monospace avec un fond gris clair et une bordure discrète, ce qui rend le code facile à repérer. La couleur indigo du texte de code s'accorde avec le thème de l'application. Ces styles aident à rendre les réponses avec du texte formaté plus claires et pro.
 
 9. **Sections spécifiques et composants visuels:**
 ```css
@@ -810,7 +845,7 @@ Cette section définit le formatage des éléments Markdown dans les réponses d
     border-left: 4px solid #64748b;
 }
 ```
-Ces styles créent des sections visuellement distinctes dans les réponses du chatbot pour différents types d'informations. Chaque type de section (analyse de problème, vérifications, procédure, conseils, sources) reçoit un code couleur unique avec un fond pâle et une bordure gauche accentuée. Cette approche de codage couleur améliore considérablement la lisibilité et permet aux utilisateurs d'identifier rapidement les différents types d'informations dans les réponses complexes. L'ombre légère et les coins arrondis ajoutent une profondeur subtile, séparant visuellement ces sections du reste du contenu.
+Ces styles aident à distinguer les différentes informations dans les réponses du chatbot. Chaque partie, comme l'analyse de problème, les vérifications, les procédures, les conseils et les sources, a sa propre couleur avec un fond clair et une bordure à gauche. Ça rend les réponses plus lisibles et permet aux utilisateurs de trouver rapidement les informations qu'ils cherchent, même quand c'est un peu compliqué. Les ombres légères et les coins arrondis apportent une petite touche sympa, en séparant bien les sections.
 
 10. **Responsive design:**
 ```css
@@ -836,7 +871,7 @@ Ces styles créent des sections visuellement distinctes dans les réponses du ch
     }
 }
 ```
-Cette section assure que l'interface s'adapte élégamment aux appareils mobiles et aux écrans plus petits. Sur les écrans étroits (jusqu'à 768px), la sidebar est automatiquement masquée pour maximiser l'espace de conversation. Les messages peuvent occuper une plus grande largeur (95% au lieu de 85%), et la zone de saisie est ajustée avec un rembourrage réduit pour maintenir l'utilisabilité sur les petits écrans. L'input-wrapper est configuré pour s'étendre complètement et maintenir l'alignement vertical des éléments. Ces ajustements garantissent une expérience utilisateur cohérente sur tous les appareils, des ordinateurs de bureau aux smartphones.
+Cette partie s'assure que l'interface fonctionne bien sur les mobiles et les écrans plus petits. Sur les écrans étroits (jusqu'à 768px), la barre latérale se cache automatiquement pour laisser plus de place aux messages. Ces derniers occupent une plus grande largeur (95% au lieu de 85%), et la zone de saisie est modifiée avec moins de marge pour que ce soit facile à utiliser sur les petits écrans. L'input-wrapper s'étend sur toute la largeur et garde les éléments bien alignés. Tous ces réglages permettent d'avoir une bonne expérience, que l'on soit sur un ordinateur ou un smartphone.
 
 ### static/js/main.js
 
@@ -930,7 +965,7 @@ async function addTypingEffect(element, content) {
     }
 }
 ```
-Cette fonction crée un effet de frappe en temps réel pour simuler une réponse progressive du chatbot. Elle adapte intelligemment sa vitesse selon la longueur du contenu, avec un mode rapide pour les réponses longues et un mode normal pour les réponses courtes qui affiche le texte caractère par caractère avec des délais variables.
+Cette fonctionnalité fait que le texte du chatbot s'affiche comme s'il était écrit en direct. Elle change la vitesse en fonction de la longueur du message, allant plus vite pour les réponses longues et ralentissant pour les plus courtes, en montrant le texte lettre par lettre avec des pauses différentes.
 
 ##### addLoadingMessage() et removeLoadingMessage()
 ```javascript
@@ -1107,49 +1142,41 @@ sidebarToggle.addEventListener('click', function () {
     }
 });
 ```
-Gère le comportement responsive de l'application, avec une détection automatique du mode mobile et des ajustements dynamiques pour la sidebar. Le système vérifie la taille de l'écran au chargement et lors du redimensionnement, avec des états adaptés entre mobile et desktop pour maximiser l'expérience utilisateur sur tous les appareils.
+Gère comment l'application s'affiche sur différents écrans. Sur un mobile, elle adapte la barre latérale. Le système regarde la taille de l'écran quand la page se charge et aussi quand elle se redimensionne pour que ça fonctionne bien autant sur mobile que sur ordinateur.
 
 #### Caractéristiques notables:
 
-1. **Animations et transitions fluides**:
-   - Effet de frappe pour simuler une réponse progressive
-   - Animations d'entrée/sortie pour les messages et panneaux
-   - Transitions pour les changements d'état
+Pour rendre le chatbot agréable à utiliser tout en restant transparent sur son fonctionnement interne, j’ai ajouté plusieurs raffinements :
 
-2. **Gestion intelligente du contenu**:
-   - Prétraitement et segmentation du markdown complexe
-   - Adaptation de la vitesse d'affichage selon la longueur du contenu
-   - Formatage visuel amélioré des sections spécifiques de réponse
-
-3. **Optimisations UX**:
-   - Indicateurs de chargement animés
-   - Effets visuels pour les changements d'état (temps de traitement)
-   - Panneaux pliables pour les informations secondaires (requêtes, documents)
-
-4. **Sécurité intégrée**:
-   - Sanitisation du HTML avec DOMPurify
-   - Validation des entrées utilisateur
-   - Gestion gracieuse des erreurs API
-
-5. **Fonctionnalités avancées**:
-   - Système de visualisation des détails des documents
-   - Formatage adaptatif selon le type de contenu
-   - Affichage optimisé des métadonnées
-
-6. **Optimisations responsive design**:
-   - Détection automatique des appareils mobiles
-   - Adaptation dynamique de l'interface selon la taille d'écran
-   - Comportement différencié de la sidebar sur mobile/desktop
-   - Gestion des événements de redimensionnement
+1. **Animations douces** : l’effet de frappe simule une réponse qui se dévoile petit à petit, tandis que les volets latéraux s’ouvrent et se referment sans à‑coups. Le tout crée une impression de fluidité qui rappelle les messageries instantanées.
+2. **Affichage malin du contenu** : le Markdown est pré‑traité pour éviter les surprises d’affichage ; la vitesse de défilement s’adapte à la longueur du texte ; et les sections importantes (code, listes, blocs de citation) bénéficient d’un style un peu plus soigné pour ressortir au premier coup d’œil.
+3. **Confort visuel et retours d’état** : un petit indicateur animé signale que la requête est en cours de traitement. Dès que la réponse arrive, un changement de couleur rappelle le temps mis par le système, ce qui aide à évaluer les performances en direct.
+4. **Sécurité en tête** : chaque fois qu’un bloc HTML doit être injecté, DOMPurify passe avant pour filtrer les balises douteuses. De plus, j’ai ajouté un contrôle simple sur les saisies utilisateur pour éviter des injections involontaires. Si l’API tombe, le message d’erreur reste lisible et sans jargon technique.
+5. **Vue détaillée des sources** : un clic sur un document ouvre un encart qui affiche le passage exact, ainsi que ses métadonnées. On sait immédiatement d’où vient chaque information.
+6. **Responsive par nature** : l’interface détecte les écrans mobiles et réorganise automatiquement les panneaux. Sur téléphone, la sidebar se replie pour laisser toute la place au fil de discussion, mais reste accessible via un bouton flottant.
 
 ## Scripts de collecte de données
 ### get_posts.py
 
-Ce module est responsable de récupérer les posts et leurs commentaires depuis le subreddit "techsupport" sur Reddit à l'aide de l'API PRAW.
+Afin d’alimenter la base de connaissances avec des retours d’expérience concrets, j’ai rédigé un petit script qui va puiser dans le subreddit `r/techsupport`. Voici, en termes simples, ce qu’il fait :
+
+1. **Connexion** : le script s’identifie auprès de Reddit via `PRAW` à l’aide de mes identifiants d’API.
+2. **Parcours des posts** : il parcourt la liste des sujets récents.
+3. **Extraction des discussions** : pour chaque post, il retient une vingtaine de commentaires parmi les plus pertinents.
+4. **Sauvegarde** : l’ensemble est stocké dans un fichier JSON, prêt à être nettoyé puis indexé dans FAISS.
+
+Ce petit outil me permet d’actualiser la base quand je le souhaite, sans devoir passer par une collecte manuelle fastidieuse.
 
 #### Vue d'ensemble
 
-Le script se connecte à Reddit via l'API PRAW, récupère les posts du subreddit "techsupport", extrait jusqu'à 20 commentaires par post, et sauvegarde l'ensemble dans un fichier JSON.
+Ce script récupère les publications et jusqu’à vingt commentaires par post sur le subreddit `r/techsupport` en s’appuyant sur l’API `PRAW`, puis stocke le tout dans un fichier JSON.
+
+**Étapes principales** :
+
+1. Connexion à Reddit via `PRAW` à l’aide des identifiants fournis.
+2. Parcours des posts récents du subreddit techsupport.
+3. Extraction de chaque post, accompagnée d’un maximum de 20 commentaires.
+4. Sérialisation des données (titre, corps du message, commentaires, ...) dans un fichier JSON pour un traitement ultérieur (indexation).
 
 #### Configuration
 
@@ -1272,11 +1299,11 @@ def fetch_all_guides():
     return all_guides
 ```
 
-Cette fonction:
-- Utilise la pagination pour récupérer tous les guides (20 par requête)
-- Gère les limites de taux d'API (code 429) avec une attente automatique
-- Affiche des informations de débogage sur le statut de la requête
-- Accumule tous les guides dans une liste
+Cette fonction fait plusieurs choses :  
+- Elle récupère tous les guides, en prenant 20 à la fois.  
+- Si l'API atteint sa limite (code 429), elle attend automatiquement avant de continuer.  
+- Elle montre des informations de débogage sur le statut de chaque requête.  
+- Tous les guides sont mis dans une liste.
 
 #### Exécution principale
 
@@ -1299,78 +1326,46 @@ Cette section:
 - Sauvegarde les guides dans un fichier JSON
 - Affiche un message de confirmation ou d'erreur selon le résultat
 
-
 ## Flux de données
 
-Le flux de données du système suit ces étapes:
+Pour clarifier le chemin parcouru par l’information dans le système, j’ai résumé le processus en cinq étapes clés :
 
 1. **Saisie de la question**:
-   - L'utilisateur soumet une question via l'interface ou l'API
-
+   - L’utilisateur soumet sa requête depuis l’interface web ou via l’API
 2. **Préparation des requêtes**:
-   - La question est reformulée en 5 variantes pour améliorer la récupération
-   - Les variantes sont générées par le LLM via `generate_queries`
-
+   - Le moteur crée cinq reformulations différentes grâce à la chaîne `generate_queries`
 3. **Récupération**:
-   - Chaque variante est utilisée pour interroger la base vectorielle
-   - Les résultats sont fusionnés et dédupliqués via `get_unique_union`
-   - Pour les guides, les étapes détaillées sont récupérées via l'API iFixit
-
+   - Chaque variante interroge l’index FAISS ; les résultats sont fusionnés et dé‑dupliqués (via `get_unique_union`), puis enrichis (le cas échéant) par les étapes détaillées récupérées sur iFixit
 4. **Génération de réponse**:
-   - Les documents récupérés sont formatés et ajoutés au contexte
-   - Le LLM génère une réponse structurée basée sur le contexte et la question
-   - La réponse est formatée selon le template défini
-
+   - Les passages retenus sont insérés dans le contexte et transmis à GPT‑4.1, qui rédige une réponse structurée selon le template prévu
 5. **Retour à l'utilisateur**:
-   - La réponse, les requêtes générées, les documents récupérés et le temps de traitement sont renvoyés
-   - L'interface web affiche la réponse formatée en Markdown
-   - Les données additionnelles (requêtes, documents) sont disponibles dans des panneaux pliables
+   - La réponse, les requêtes générées, les documents utilisés et le temps de traitement sont renvoyés. Sur le front‑end, ces données apparaissent dans la zone de chat et dans des volets repliables
 
 ## Modèles et embeddings
 
-Le système utilise:
+Le pipeline repose sur trois briques principales :
 
 1. **Modèle d'embeddings**:
-   - Hugging Face `sentence-transformers/all-MiniLM-L6-v2`
-   - Utilisé pour transformer les textes en vecteurs
-   - Configuré pour utiliser CUDA si disponible
-
+   - J’utilise `sentence‑transformers/all‑MiniLM‑L6‑v2` (Hugging Face) pour convertir les textes en vecteurs, avec prise en charge de CUDA quand la carte graphique est disponible
 2. **Modèle de langage**:
-   - OpenAI GPT-4.1
-   - Temperature de 0.0 (déterministe)
-   - Utilisé pour la génération de requêtes et la génération de réponses
-
+   - GPT‑4.1 d’OpenAI, réglé sur une température de 0,0 afin de produire des réponses déterministes. Le même modèle génère aussi les requêtes alternatives
 3. **Base vectorielle**:
-   - FAISS (Facebook AI Similarity Search)
-   - Configuration: `similarity_score_threshold` avec k=2 et seuil=0.3
-   - Optimisée pour la vitesse et la précision
+   - FAISS, configuré avec un `k` de 2 et un seuil de similarité de 0,3 pour équilibrer vitesse et précision.
 
 ## Interface utilisateur
 
-L'interface utilisateur du système est construite avec les technologies web modernes pour offrir une expérience utilisateur optimale:
+La majeure partie de la structure a déjà été décrite, mais voici un récapitulatif rapide :
 
 ### Caractéristiques principales:
 
 1. **Disposition à deux panneaux**:
-   - Panneau latéral (sidebar) pour les informations techniques et données RAG
-   - Panneau principal pour l'interface de chat conversationnelle
-   - Design responsive avec possibilité de masquer la sidebar sur petits écrans
-
+   - À gauche, une sidebar qui répertorie les métriques et les données RAG ; à droite, le fil de discussion. Sur mobile, la sidebar se masque automatiquement
 2. **Organisation visuelle**:
-   - Interface de chat familière avec messages utilisateur/bot différenciés
-   - Barre de saisie fixe en bas pour une interaction naturelle
-   - Panneaux pliables pour les informations techniques (requêtes, documents)
-
+   - Messages utilisateur/bot bien différenciés, barre de saisie fixe, volets repliables pour consulter les requêtes et les documents
 3. **Visualisation des données RAG**:
-   - Panneau dédié aux requêtes alternatives générées
-   - Présentation des documents récupérés avec système de visualisation détaillée
-   - Indicateur de temps de traitement pour la transparence du processus
-
+   - Onglets pour les requêtes générées, tableau des documents, indicateur de temps de traitement
 4. **Fonctionnalités avancées**:
-   - Tailwind CSS pour le design responsive et moderne
-   - Font Awesome pour l'iconographie cohérente
-   - Marked.js pour le rendu Markdown des réponses complexes
-   - DOMPurify pour garantir la sécurité du contenu généré
+   - Tailwind​ CSS (style), Font Awesome (icônes), Marked.js (Markdown), DOMPurify (sanitisation)
 
 5. **Composants JavaScript**:
    - `main.js` gère les interactions utilisateur
@@ -1383,8 +1378,8 @@ L'interface utilisateur du système est construite avec les technologies web mod
 
 - Python 3.x
 - Fichiers sources JSON (`./data/guides.json` et `./data/techsupport_posts.json`)
-- Clé API OpenAI dans le fichier `.env`
-- CUDA recommandé pour de meilleures performances
+- Clé API OpenAI dans un fichier `.env`
+- GPU compatible CUDA (optionnel mais recommandé)
 
 ### Structure des fichiers:
 
@@ -1429,31 +1424,29 @@ python app.py
 
 ## Points d'extension
 
-Le système peut être étendu de plusieurs façons:
+Plusieurs pistes d’amélioration restent ouvertes ; elles visent à renforcer la pertinence des réponses, la transparence du pipeline et le confort de l’utilisateur, sans remettre en question l’ossature du système.
 
 1. **Ajout de nouvelles sources**:
    - Modifier `retriever.py` pour intégrer de nouvelles sources de données
    - Adapter le format des documents dans `index_data_embeddings()`
-
 2. **Changement de modèles**:
    - Modifier le modèle d'embeddings dans `index_data_embeddings()`
    - Modifier le modèle LLM dans `initialize_rag_system()`
-
 3. **Optimisation des prompts**:
    - Adapter les templates dans `initialize_rag_system()`
    - Affiner le format de réponse selon les besoins
-
 4. **Amélioration du retriever**:
    - Ajuster les paramètres du retriever (`chunk_size`, `search_kwargs`, etc.)
    - Implémenter des techniques de ré-ordonnancement ou de boosting
-
 5. **Interface utilisateur**:
    - Modifier `templates/index.html` et `static/css/style.css` pour personnaliser l'interface
    - Ajouter des fonctionnalités comme l'historique des conversations
    - Intégrer des visualisations pour la pertinence des documents
-
 6. **Optimisations frontend**:
    - Améliorer les animations et transitions
    - Ajouter des graphiques pour visualiser la pertinence des résultats
    - Implémenter un mode sombre/clair
    - Ajouter la sauvegarde de conversations
+
+Chaque amélioration peut être intégrée de façon incrémentale ; ainsi le cœur RAG demeure stable tandis que l’expérience globale gagne en richesse.
+
