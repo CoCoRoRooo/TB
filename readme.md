@@ -1,6 +1,6 @@
 # Chatbot RAG — Support technique
 
-Ce dépôt rassemble le prototype que j’ai réalisé dans le cadre de mon mémoire de bachelor à la HEG Genève (2025). L’objectif est de démontrer qu’une approche **Retrieval‑Augmented Generation** (RAG) permet déjà de répondre aux questions d’un service d’assistance en combinant deux ressources ouvertes : d’un côté les guides iFixit, de l’autre les discussions du subreddit `r/techsupport`. Le modèle de langage reste généraliste ; toute la valeur provient du contexte précis qu’on lui fournit.
+Ce dépôt rassemble le prototype que j’ai réalisé dans le cadre de mon mémoire de bachelor à la HEG Genève (2025). L’objectif est de démontrer qu’une approche **Retrieval‑Augmented Generation** (RAG) permet déjà de répondre aux questions concernant une panne d’un utilisateur en combinant deux ressources ouvertes : d’un côté les guides iFixit, de l’autre les discussions du subreddit `r/techsupport`. Le modèle de langage reste généraliste ; toute la valeur provient du contexte précis qu’on lui fournit.
 
 ```
 ┌─────────────────────────────────────┐
