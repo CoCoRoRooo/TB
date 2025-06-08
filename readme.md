@@ -31,35 +31,46 @@ Ce dépôt rassemble le prototype que j’ai réalisé dans le cadre de mon mém
 
 ## Prérequis
 
-- Python 3.x installé ;
+- Python 3.11 installé ;
 - clé API OpenAI à placer dans `.env` ;
 - GPU compatible CUDA (facultatif) pour accélérer les embeddings ;
 - fichiers JSON copiés dans `data/`.
 
 ## Installation
 
-1. Cloner le dépôt :
+1. **Cloner le dépôt** :
    ```bash
    git clone https://github.com/CoCoRoRooo/TB
    cd TB
    ```
-2. Activer l'environnement virtuel :
+2. **Créer l’environnement virtuel** :
+   ```bash
+   python -m venv venv
+   ```
+3. **Activer l’environnement virtuel** :
    ```bash
    .\venv\Scripts\activate
    ```
-3. Installer les dépendances :
+   Si PowerShell bloque l’exécution de scripts :
+
+   ```powershell
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+   ```
+4. **Installer les dépendances** :
    ```bash
    pip install -r requirements.txt
    ```
-4. Renseigner la clé OpenAI :
+5. **Renseigner la clé OpenAI** (dans un fichier `.env`) :
    ```bash
    echo OPENAI_KEY="votre_cle_api" > .env
    ```
-5. Démarrer le serveur :
+6. **Lancer le serveur** :
    ```bash
    python app.py
    ```
-6. Ouvrir <http://localhost:5000> dans votre navigateur.
+7. **Accéder à l’application** :
+   Ouvrir [http://localhost:5000](http://localhost:5000) dans votre navigateur.
+
 
 ## Architecture
 

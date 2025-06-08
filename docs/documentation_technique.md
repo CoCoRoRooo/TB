@@ -1376,7 +1376,7 @@ La majeure partie de la structure a déjà été décrite, mais voici un récapi
 
 ### Prérequis:
 
-- Python 3.x
+- Python 3.11
 - Fichiers sources JSON (`./data/guides.json` et `./data/techsupport_posts.json`)
 - Clé API OpenAI dans un fichier `.env`
 - GPU compatible CUDA (optionnel mais recommandé)
@@ -1409,8 +1409,14 @@ La majeure partie de la structure a déjà été décrite, mais voici un récapi
 ### Installation:
 
 ```bash
+# Créer l'environnement virtuel
+python -m venv venv
+
 # Activer l'environnement virtuel
 .\venv\Scripts\activate 
+
+# Si PowerShell bloque l’exécution de scripts :
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 # Installer les dépendances
 pip install -r requirements.txt
